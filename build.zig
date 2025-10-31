@@ -83,8 +83,13 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+    const zalgebra = b.dependency("zalgebra", .{
+        .target = target,
+        .optimize = optimize,
+    });
+    exe.root_module.addImport("zalgebra", zalgebra.module("zalgebra"));
 
-        // Add GLAD C source file
+    // Add GLAD C source file
     exe.addCSourceFile(.{
         .file = b.path("libs/glad/src/glad.c"),
         .flags = &[_][]const u8{"-std=c99"},
