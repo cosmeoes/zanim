@@ -32,6 +32,10 @@
     // Once all dependencies are fetched, `zig build` no longer requires
     // internet connectivity.
     .dependencies = .{
+        .zalgebra = .{
+            .url = "git+https://github.com/kooparse/zalgebra#df88d0e930b6a49ba539a45c005826cdb57e70c6",
+            .hash = "zalgebra-0.0.0-aaiVSqhwAQCC7FarzEIQtMtlbL8CGfHXTZNirrd4tPwI",
+        },
     },
     .paths = .{
         "build.zig",

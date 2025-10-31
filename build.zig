@@ -83,6 +83,16 @@ pub fn build(b: *std.Build) void {
         }),
     });
 
+
+        // Add GLAD C source file
+    exe.addCSourceFile(.{
+        .file = b.path("libs/glad/src/glad.c"),
+        .flags = &[_][]const u8{"-std=c99"},
+    });
+
+    // Add include path for GLAD headers
+    exe.addIncludePath(b.path("libs/glad/include"));
+    
     exe.linkSystemLibrary("c");
     exe.linkSystemLibrary("glfw");
     // This declares intent for the executable to be installed into the
