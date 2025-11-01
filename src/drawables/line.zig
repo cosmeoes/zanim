@@ -14,7 +14,7 @@ pub const Line = struct {
 
     pub fn new(start: Vec3, end: Vec3, color: Vec3) !Line {
         var line = Line {
-            .base = Drawable.init(.LinePath),
+            .base = Drawable.init(.LineSegments),
             .start = start,
             .end = end,
             .color = color,
@@ -24,7 +24,7 @@ pub const Line = struct {
         return line;
     }
 
-    fn generateVertices(self: *Line) !void {
+    pub fn generateVertices(self: *Line) !void {
         try self.base.appendVec3(self.start);
         try self.base.appendVec3(self.color);
 

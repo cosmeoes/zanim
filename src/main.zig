@@ -16,6 +16,7 @@ const Render = @import("render/render.zig").Renderer;
 const Drawable = @import("drawables/drawable.zig").Drawable;
 const Scene = @import("scene.zig").Scene;
 const assert = std.debug.assert;
+const CreateLine = @import("animation/animation.zig").CreateLine;
 
 const WindowSize = struct {
     pub var width: c_int = 800;
@@ -124,7 +125,7 @@ pub fn main() !void {
     var lastFrame: f32 = 0.0; // Time of last frame
     camera = Camera.new(Vec3.new(0.0, 0.0, 3.0));
     var render = Render.new(ourShader);
-    var line = try Line.new(Vec3.new(-0.5, -0.5, -0.5), Vec3.new(0.5, 0.5, 0.5), Vec3.new(1, 0, 0));
+    var line = try Line.new(Vec3.new(-0.5, -0.5, 0), Vec3.new(0.5, 0.5, 0), Vec3.new(1, 0, 0));
     defer line.base.deinit();
     try scene.add(&line.base);
 
@@ -137,7 +138,6 @@ pub fn main() !void {
         Vec3.new(1, 1, 0),
     );
     defer triangle.base.deinit();
-    try scene.add(&triangle.base);
 
     var rectangle = try Polygon.new(
         &[_]Vec3{ 
@@ -149,13 +149,15 @@ pub fn main() !void {
         Vec3.new(0, 1, 0),
     );
     defer rectangle.base.deinit();
-    try scene.add(&rectangle.base);
+    // try scene.add(&rectangle.base);
 
+    var createLine = CreateLine.init(&line, 0.5);
+    try scene.play(createLine.asAnimatable());
 
     while (c.glfwWindowShouldClose(window) != c.GLFW_TRUE) {
         updateInput(window);
-        // render.clear(0.2, 0.3, 0.3);
-        render.clear(0, 0, 0);
+        render.clear(0.2, 0.3, 0.3);
+        //render.clear(0, 0, 0);
 
         const currentFrame: f32 = @floatCast(c.glfwGetTime());
         deltaTime = currentFrame - lastFrame;
@@ -191,14 +193,18 @@ pub fn main() !void {
         render.setViewMatrix(camera.viewMatrix());
         render.setProjectionMatrix(projection);
 
-        const angle: f32 = @floatCast(c.glfwGetTime()*50);
-        line.base.rotate(angle, Vec3.new(1.0, 0.3, 0.5));
+        // const angle: f32 = @floatCast(c.glfwGetTime()*50);
+        // line.base.rotate(angle, Vec3.new(1.0, 0.3, 0.5));
 
-        triangle.base.scale(std.math.sin(za.toRadians(angle)));
+        // triangle.base.scale(std.math.sin(za.toRadians(angle)));
 
-        rectangle.base.translate(Vec3.new(-1, -5, -1));
-        rectangle.base.rotate(angle, Vec3.new(0, 0, 1));
+        // rectangle.base.translate(Vec3.new(-1, -5, -1));
+        // rectangle.base.rotate(angle, Vec3.new(0, 0, 1));
 
+        scene.update(deltaTime);
+
+        line.base.vertex_buffer.clearAndFree(Drawable.getAllocator());
+        try line.generateVertices();
         for (scene.objects.items) |object| {
             render.drawDrawable(object.*);
         }
