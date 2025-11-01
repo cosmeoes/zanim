@@ -13,11 +13,7 @@ pub const Polygon = struct {
 
     pub fn new(vertices: []const Vec3, color: Vec3) !Polygon {
         var polygon = Polygon{
-            .base = Drawable{
-                .vertex_mode = .TriangleMesh,
-                .vertices = std.ArrayList(f32){},
-                .transform = Transform.init(),
-            },
+            .base = Drawable.init(.TriangleMesh),
             .vertices = vertices,
             .color = color,
         };
@@ -28,30 +24,20 @@ pub const Polygon = struct {
 
     fn generateVertices(self: *Polygon) !void {
         const firstVertex = self.vertices[0];
+
+        // Generate a fan of triangles with the given vertices
         for (self.vertices, 0..) |v1, i| {
             if (i == self.vertices.len - 1) break;
 
             const v2 = self.vertices[i+1];
-            try self.base.vertices.append(Drawable.getAllocator(), firstVertex.x());
-            try self.base.vertices.append(Drawable.getAllocator(), firstVertex.y());
-            try self.base.vertices.append(Drawable.getAllocator(), firstVertex.z());
-            try self.base.vertices.append(Drawable.getAllocator(), self.color.x());
-            try self.base.vertices.append(Drawable.getAllocator(), self.color.y());
-            try self.base.vertices.append(Drawable.getAllocator(), self.color.z());
+            try self.base.appendVec3(firstVertex);
+            try self.base.appendVec3(self.color);
 
-            try self.base.vertices.append(Drawable.getAllocator(), v1.x());
-            try self.base.vertices.append(Drawable.getAllocator(), v1.y());
-            try self.base.vertices.append(Drawable.getAllocator(), v1.z());
-            try self.base.vertices.append(Drawable.getAllocator(), self.color.x());
-            try self.base.vertices.append(Drawable.getAllocator(), self.color.y());
-            try self.base.vertices.append(Drawable.getAllocator(), self.color.z());
+            try self.base.appendVec3(v1);
+            try self.base.appendVec3(self.color);
 
-            try self.base.vertices.append(Drawable.getAllocator(), v2.x());
-            try self.base.vertices.append(Drawable.getAllocator(), v2.y());
-            try self.base.vertices.append(Drawable.getAllocator(), v2.z());
-            try self.base.vertices.append(Drawable.getAllocator(), self.color.x());
-            try self.base.vertices.append(Drawable.getAllocator(), self.color.y());
-            try self.base.vertices.append(Drawable.getAllocator(), self.color.z());
+            try self.base.appendVec3(v2);
+            try self.base.appendVec3(self.color);
         }
     }
 };

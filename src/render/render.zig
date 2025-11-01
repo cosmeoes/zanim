@@ -6,6 +6,7 @@ const Camera = @import("camera.zig").Camera;
 const za = @import("zalgebra");
 const std = @import("std");
 const geometry = @import("../drawables/utils/geometry.zig");
+const Drawable = @import("../drawables/drawable.zig").Drawable;
 const Mat4 = za.Mat4; 
 
 pub const Renderer = struct {
@@ -89,6 +90,10 @@ pub const Renderer = struct {
         c.glDrawArrays(primitiveToGLMode(vertexMode), 0, @intCast(vertices.len));
         c.glBindVertexArray(0);
         self.resetModelMatrix();
+    }
+
+    pub fn drawDrawable(self: *Renderer, drawable: Drawable) void {
+        self.draw(drawable.vertex_buffer.items, drawable.vertex_mode);
     }
 
     fn primitiveToGLMode(mode: geometry.VertexMode) c_uint {

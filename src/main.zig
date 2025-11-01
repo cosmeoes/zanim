@@ -97,7 +97,7 @@ pub fn main() !void {
     c.glfwWindowHint(c.GLFW_CONTEXT_VERSION_MINOR, 3);
     c.glfwWindowHint(c.GLFW_OPENGL_PROFILE, c.GLFW_OPENGL_CORE_PROFILE);
 
-    const window = c.glfwCreateWindow(WindowSize.width, WindowSize.height, "example_glfw_opengl3", null, null);
+    const window = c.glfwCreateWindow(WindowSize.width, WindowSize.height, "zig_manim", null, null);
     if (window == null) {
         return;
     }
@@ -155,7 +155,7 @@ pub fn main() !void {
         lastFrame = currentFrame;
 
         if (InputState.justPressed(@intCast(c.GLFW_KEY_C))) {
-            PreviewState.camara_move = !PreviewState.camara_move; 
+            PreviewState.camara_move = !PreviewState.camara_move;
             if (PreviewState.camara_move) {
                 c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_HIDDEN);
             } else {
@@ -185,20 +185,18 @@ pub fn main() !void {
         c.glEnable(c.GL_DEPTH_TEST);
 
         const angle: f32 = @floatCast(c.glfwGetTime()*50);
-        // const model = Mat4.identity().rotate(angle, Vec3.new(1.0, 0.3, 0.5));
-        // render.setModelMatrix(model);
         line.base.rotate(angle, Vec3.new(1.0, 0.3, 0.5));
         render.setModelMatrix(line.base.getTransformMatrix());
-        render.draw(line.base.vertices.items, line.base.vertex_mode);
+        render.drawDrawable(line.base);
 
         triangle.base.scale(std.math.sin(za.toRadians(angle)));
         render.setModelMatrix(triangle.base.getTransformMatrix());
-        render.draw(triangle.base.vertices.items, triangle.base.vertex_mode);
+        render.drawDrawable(triangle.base);
 
         rectangle.base.translate(Vec3.new(-1, -5, -1));
         rectangle.base.rotate(angle, Vec3.new(0, 0, 1));
         render.setModelMatrix(rectangle.base.getTransformMatrix());
-        render.draw(rectangle.base.vertices.items, rectangle.base.vertex_mode);
+        render.drawDrawable(rectangle.base);
 
         c.glfwSwapBuffers(window);
         c.glfwPollEvents();

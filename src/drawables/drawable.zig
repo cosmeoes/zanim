@@ -8,7 +8,8 @@ const Transform = @import("utils/transform.zig").Transform;
 pub const Drawable = struct {
     vertex_mode: geometry.VertexMode ,
     transform: Transform,
-    vertices: std.ArrayList(f32),
+    // Represents the data that will be used for rendering
+    vertex_buffer: std.ArrayList(f32),
 
     var global_allocator: std.mem.Allocator = undefined;
     pub fn setUp(allocator: std.mem.Allocator) void {
@@ -19,8 +20,16 @@ pub const Drawable = struct {
         return global_allocator;
     }
 
+    pub fn init(mode: geometry.VertexMode) Drawable {
+        return .{
+            .vertex_mode = mode,
+            .vertex_buffer = std.ArrayList(f32){},
+            .transform = Transform.init(),
+        };
+    }
+
     pub fn deinit(self: *Drawable) void {
-        self.vertices.deinit(global_allocator);
+        self.vertex_buffer.deinit(global_allocator);
     }
 
     pub fn translate(self: *Drawable, pos: za.Vec3) void {
@@ -37,5 +46,11 @@ pub const Drawable = struct {
 
     pub fn getTransformMatrix(self: Drawable) za.Mat4 {
         return self.transform.toMatrix();
+    }
+
+    pub fn appendVec3(self: *Drawable, value: Vec3) !void {
+        try self.vertex_buffer.append(Drawable.getAllocator(), value.x());
+        try self.vertex_buffer.append(Drawable.getAllocator(), value.y());
+        try self.vertex_buffer.append(Drawable.getAllocator(), value.z());
     }
 };
