@@ -123,11 +123,8 @@ pub fn main() !void {
 
     var deltaTime: f32 = 0.0;	// Time between current frame and last frame
     var lastFrame: f32 = 0.0; // Time of last frame
-    camera = Camera.new(Vec3.new(0.0, 0.0, 3.0));
+    camera = Camera.new(Vec3.new(0.0, 0.0, 10.0));
     var render = Render.new(ourShader);
-    var line = try Line.new(Vec3.new(-0.5, -0.5, 0), Vec3.new(0.5, 0.5, 0), Vec3.new(1, 0, 0));
-    defer line.base.deinit();
-    try scene.add(&line.base);
 
     var triangle = try Polygon.new(
         &[_]Vec3{
@@ -140,6 +137,7 @@ pub fn main() !void {
     defer triangle.base.deinit();
     var createTriangle = try Create.init(scene.allocator, &triangle.base, 1);
     defer createTriangle.deinit();
+    createTriangle.fromCenter();
     try scene.add(&triangle.base);
     try scene.play(createTriangle.asAnimatable());
 
@@ -153,15 +151,19 @@ pub fn main() !void {
         Vec3.new(0, 1, 0),
     );
     defer rectangle.base.deinit();
-    rectangle.base.translate(Vec3.new(-1, -5, -1));
-    rectangle.base.rotate(90, Vec3.new(0, 0, 1));
+    rectangle.base.translate(Vec3.new(-1, 0, -1));
+    rectangle.base.rotate(-90, Vec3.new(0, 0, 1));
+    rectangle.base.scale(1.0/5.0);
     try scene.add(&rectangle.base);
     var createRectangle = try Create.init(scene.allocator, &rectangle.base, 1);
     defer createRectangle.deinit();
     try scene.play(createRectangle.asAnimatable());
 
+    var line = try Line.new(Vec3.new(-0.5, -0.5, 0), Vec3.new(0.5, 0.5, 0), Vec3.new(1, 0, 0));
+    defer line.base.deinit();
     var createLine = try Create.init(scene.allocator, &line.base, 14);
     defer createLine.deinit();
+    try scene.add(&line.base);
     try scene.play(createLine.asAnimatable());
 
     while (c.glfwWindowShouldClose(window) != c.GLFW_TRUE) {
@@ -175,7 +177,7 @@ pub fn main() !void {
         if (InputState.justPressed(@intCast(c.GLFW_KEY_C))) {
             PreviewState.camara_move = !PreviewState.camara_move;
             if (PreviewState.camara_move) {
-                c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_HIDDEN);
+                c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_DISABLED);
             } else {
                 c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_NORMAL);
             }
