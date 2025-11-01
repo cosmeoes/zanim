@@ -6,7 +6,7 @@ const Mat4 = @import("zalgebra").Mat4;
 
 pub const Shader = struct {
     id: c_uint,
-    pub fn build(vertexPath: []const u8, fragmentPath: []const u8) !Shader {
+    pub fn new(vertexPath: []const u8, fragmentPath: []const u8) !Shader {
        // Initiate allocator
        var gpa = std.heap.GeneralPurposeAllocator(.{}){};
        defer _ = gpa.deinit();

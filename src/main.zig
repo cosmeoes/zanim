@@ -6,9 +6,10 @@ const c = @cImport({
     @cInclude("GLFW/glfw3.h");
 });
 const za = @import("zalgebra");
-const Vec3 = @import("zalgebra").Vec3;
-const Mat4 = @import("zalgebra").Mat4;
-const shader = @import("shader.zig");
+const Vec3 = za.Vec3;
+const Mat4 = za.Mat4;
+const Shader = @import("shader.zig").Shader;
+const Camera = @import("camera.zig").Camera;
 
 const WindowSize = struct {
     pub var width: c_int = 800;
@@ -26,11 +27,9 @@ pub fn error_callback(errCode: c_int, message: [*c]const u8)  callconv(.c) void 
 }
 
 var firstMouse = true;
-var yaw: f64 = -90.0;	// yaw is initialized to -90.0 degrees since a yaw of 0.0 results in a direction vector pointing to the right so we initially rotate a bit to the left.
-var pitch: f64 = 0.0;
 var lastX: f64 = 800.0 / 2.0;
 var lastY: f64 = 600.0 / 2.0;
-var fov: f64 = 45.0;
+
 pub fn mouse_callback(_: ?*c.GLFWwindow, xpos: f64, ypos: f64) callconv(.c) void {
    if (firstMouse) {
         lastX = xpos;
@@ -38,41 +37,20 @@ pub fn mouse_callback(_: ?*c.GLFWwindow, xpos: f64, ypos: f64) callconv(.c) void
         firstMouse = false;
     }
   
-    var xoffset = xpos - lastX;
-    var yoffset = lastY - ypos; 
+    const xoffset = xpos - lastX;
+    const yoffset = lastY - ypos; 
     lastX = xpos;
     lastY = ypos;
 
-    const sensitivity = 0.1;
-    xoffset *= sensitivity;
-    yoffset *= sensitivity;
-
-    yaw   += xoffset;
-    pitch += yoffset;
-
-    if(pitch > 89.0) {
-        pitch = 89.0;
-    }
-    if(pitch < -89.0) {
-        pitch = -89.0;
-    }
-
-    var direction = Vec3.new(
-        @floatCast(std.math.cos(za.toRadians(yaw)) * std.math.cos(za.toRadians(pitch))),
-        @floatCast(std.math.sin(za.toRadians(pitch))),
-        @floatCast(std.math.sin(za.toRadians(yaw)) * std.math.cos(za.toRadians(pitch))),
-    );
-
-    cameraFront = direction.norm();
+    camera.processMovement(@floatCast(xoffset), @floatCast(yoffset));
 }
 
-var cameraPos = Vec3.new(0.0, 0.0, 3.0);
-var cameraFront = Vec3.new(0, 0, -1);
-const cameraUp = Vec3.up(); 
+// var cameraPos = Vec3.new(0.0, 0.0, 3.0);
+// var cameraFront = Vec3.new(0, 0, -1);
+// const cameraUp = Vec3.up(); 
 
+var camera: Camera = undefined;
 pub fn main() !void {
-    // Prints to stderr, ignoring potential errors.
-    //glfw.setErrorCallback(errorCallback);
     if (c.glfwInit() != c.GLFW_TRUE) {
         return;
     }
@@ -100,7 +78,7 @@ pub fn main() !void {
     }
     _ = c.glfwSetErrorCallback(error_callback);
     _ = c.glfwSetCursorPosCallback(window, mouse_callback);
-    const ourShader = try shader.Shader.build("shaders/vertex.vs", "shaders/frag.fs");
+    const ourShader = try Shader.new("shaders/vertex.vs", "shaders/frag.fs");
 
     defer c.glDeleteProgram(ourShader.id);
 
@@ -197,6 +175,7 @@ pub fn main() !void {
     // Wait for the user to close the window.
     var deltaTime: f32 = 0.0;	// Time between current frame and last frame
     var lastFrame: f32 = 0.0; // Time of last frame
+    camera = Camera.new(Vec3.new(0.0, 0.0, 3.0));
     while (c.glfwWindowShouldClose(window) != c.GLFW_TRUE) {
         c.glClearColor(0.2, 0.3, 0.3, 1.0);
         c.glClear(c.GL_COLOR_BUFFER_BIT);
@@ -205,35 +184,27 @@ pub fn main() !void {
         lastFrame = currentFrame;  
 
         ourShader.use();
-        const cameraSpeed: f32 = 2.5 * deltaTime;
         if (c.glfwGetKey(window, c.GLFW_KEY_W) == c.GLFW_PRESS) {
-            cameraPos = cameraPos.add(cameraFront.scale(cameraSpeed));
+            camera.moveFoward(deltaTime);
         }
         if (c.glfwGetKey(window, c.GLFW_KEY_S) == c.GLFW_PRESS) {
-            cameraPos = cameraPos.sub(cameraFront.scale(cameraSpeed));
+            camera.moveBack(deltaTime);
         }
         if (c.glfwGetKey(window, c.GLFW_KEY_A) == c.GLFW_PRESS) {
-            cameraPos = cameraPos.sub(cameraFront.cross(cameraUp).norm().scale(cameraSpeed));
+            camera.moveLeft(deltaTime);
         }
         if (c.glfwGetKey(window, c.GLFW_KEY_D) == c.GLFW_PRESS) {
-            cameraPos = cameraPos.add(cameraFront.cross(cameraUp).norm().scale(cameraSpeed));
+            camera.moveRight(deltaTime);
         }
+
         if (c.glfwGetKey(window, c.GLFW_KEY_ESCAPE) == c.GLFW_PRESS) {
             c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_NORMAL);
         }
 
-        var view = Mat4.identity();
-        // note that we're translating the scene in the reverse direction of where we want to move
-        view = view.translate(Vec3.new(0.0, 0.0, 0.0));
-            // .rotate(@floatCast(c.glfwGetTime()*10), Vec3.up());
-        view = za.lookAt(cameraPos, cameraPos.add(cameraFront), cameraUp);
+        const view = camera.viewMatrix(); 
         const projection = za.perspective(45.0, @as(f32, @floatFromInt(WindowSize.width)) / @as(f32, @floatFromInt(WindowSize.height)), 0.1, 100.0);
-        // const projection = za.perspective(45.0, 800/600, 0.1, 100.0);
-
-        //ourShader.setUniform("model", model);
         ourShader.setMat4("view", view);
         ourShader.setMat4("projection", projection);
-        //ourShader.setFloat("xOffset", xoffset);
 
         c.glEnable(c.GL_DEPTH_TEST);
         c.glClear(c.GL_COLOR_BUFFER_BIT | c.GL_DEPTH_BUFFER_BIT);
