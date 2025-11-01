@@ -1,5 +1,8 @@
 const Line = @import("../drawables/line.zig").Line;
+const Polygon = @import("../drawables/polygon.zig").Polygon;
+const Drawable = @import("../drawables/drawable.zig").Drawable;
 const Vec3 = @import("zalgebra").Vec3;
+const std = @import("std");
 
 pub const Animatable = struct {
     ptr: *anyopaque,
@@ -65,33 +68,40 @@ pub const Animation = struct {
     }
 };
 
-
-pub const CreateLine = struct {
+pub const Create = struct {
     anim: Animation,
-    line: *Line,
-    original_end: Vec3,
+    drawable: *Drawable,
+    original_vertices: std.ArrayList(Vec3),
+    allocator: std.mem.Allocator,
 
-    pub fn init(line: *Line, duration: f32) CreateLine {
-        const origEnd = line.end;
-        line.end = line.start;
+    pub fn init(allocator: std.mem.Allocator, drawable: *Drawable, duration: f32) !Create {
         return .{
+            .allocator = allocator,
             .anim = Animation.init(duration),
-            .line = line,
-            .original_end = origEnd,
+            .drawable = drawable,
+            .original_vertices = try drawable.vertices.clone(allocator),
         };
     }
 
-    pub fn update(self: *CreateLine, dt: f32) void {
-        self.anim.update(dt);
-        const progress = self.anim.getProgress();
-        self.line.end = Vec3.lerp(self.line.start, self.original_end, progress);
+    pub fn deinit(self: *Create) void {
+        self.original_vertices.deinit(self.allocator);
     }
 
-    pub fn isFinished(self: CreateLine) bool {
+    pub fn update(self: *Create, dt: f32) void {
+        self.anim.update(dt);
+        const progress = self.anim.getProgress();
+
+        const firstVertex = self.drawable.vertices.items[0];
+        for (1..self.drawable.vertices.items.len) |i| {
+            self.drawable.vertices.items[i] = Vec3.lerp(firstVertex, self.original_vertices.items[i], progress);
+        }
+    }
+
+    pub fn isFinished(self: Create) bool {
         return self.anim.isFinished();
     }
 
-    pub fn asAnimatable(self: *CreateLine) Animatable {
+    pub fn asAnimatable(self: *Create) Animatable {
         return Animatable.init(self);
     }
 };

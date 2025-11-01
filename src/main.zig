@@ -17,6 +17,7 @@ const Drawable = @import("drawables/drawable.zig").Drawable;
 const Scene = @import("scene.zig").Scene;
 const assert = std.debug.assert;
 const CreateLine = @import("animation/animation.zig").CreateLine;
+const Create = @import("animation/animation.zig").Create;
 
 const WindowSize = struct {
     pub var width: c_int = 800;
@@ -138,6 +139,10 @@ pub fn main() !void {
         Vec3.new(1, 1, 0),
     );
     defer triangle.base.deinit();
+    var createTriangle = try Create.init(scene.allocator, &triangle.base, 1);
+    defer createTriangle.deinit();
+    try scene.add(&triangle.base);
+    try scene.play(createTriangle.asAnimatable());
 
     var rectangle = try Polygon.new(
         &[_]Vec3{ 
@@ -149,15 +154,20 @@ pub fn main() !void {
         Vec3.new(0, 1, 0),
     );
     defer rectangle.base.deinit();
-    // try scene.add(&rectangle.base);
+    rectangle.base.translate(Vec3.new(-1, -5, -1));
+    rectangle.base.rotate(90, Vec3.new(0, 0, 1));
+    try scene.add(&rectangle.base);
+    var createRectangle = try Create.init(scene.allocator, &rectangle.base, 1);
+    defer createRectangle.deinit();
+    try scene.play(createRectangle.asAnimatable());
 
-    var createLine = CreateLine.init(&line, 0.5);
+    var createLine = try Create.init(scene.allocator, &line.base, 14);
+    defer createLine.deinit();
     try scene.play(createLine.asAnimatable());
 
     while (c.glfwWindowShouldClose(window) != c.GLFW_TRUE) {
         updateInput(window);
-        render.clear(0.2, 0.3, 0.3);
-        //render.clear(0, 0, 0);
+        render.clear(0, 0, 0);
 
         const currentFrame: f32 = @floatCast(c.glfwGetTime());
         deltaTime = currentFrame - lastFrame;
@@ -203,9 +213,11 @@ pub fn main() !void {
 
         scene.update(deltaTime);
 
-        line.base.vertex_buffer.clearAndFree(Drawable.getAllocator());
-        try line.generateVertices();
         for (scene.objects.items) |object| {
+            // Not always necesary but probably not that slow..
+            // might need optimization later
+            try object.generateVertexBuffer();
+
             render.drawDrawable(object.*);
         }
 

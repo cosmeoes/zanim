@@ -8,36 +8,32 @@ const Drawable = @import("drawable.zig").Drawable;
 
 pub const Polygon = struct {
     base: Drawable,
-    vertices: []const Vec3,
-    color: Vec3,
 
     pub fn new(vertices: []const Vec3, color: Vec3) !Polygon {
         var polygon = Polygon{
-            .base = Drawable.init(.TriangleMesh),
-            .vertices = vertices,
-            .color = color,
+            .base = try Drawable.init(.TriangleMesh, .Polygon, vertices),
         };
+        polygon.base.setColor(color);
 
-        try polygon.generateVertices();
         return polygon;
     }
 
-    fn generateVertices(self: *Polygon) !void {
-        const firstVertex = self.vertices[0];
+    pub fn generateVertices(drawable: *Drawable) !void {
+        const firstVertex = drawable.vertices.items[0];
 
         // Generate a fan of triangles with the given vertices
-        for (self.vertices, 0..) |v1, i| {
-            if (i == self.vertices.len - 1) break;
+        for (drawable.vertices.items, 0..) |v1, i| {
+            if (i == drawable.vertices.items.len - 1) break;
 
-            const v2 = self.vertices[i+1];
-            try self.base.appendVec3(firstVertex);
-            try self.base.appendVec3(self.color);
+            const v2 = drawable.vertices.items[i+1];
+            try drawable.appendVec3(firstVertex);
+            try drawable.appendVec3(drawable.color);
 
-            try self.base.appendVec3(v1);
-            try self.base.appendVec3(self.color);
+            try drawable.appendVec3(v1);
+            try drawable.appendVec3(drawable.color);
 
-            try self.base.appendVec3(v2);
-            try self.base.appendVec3(self.color);
+            try drawable.appendVec3(v2);
+            try drawable.appendVec3(drawable.color);
         }
     }
 };

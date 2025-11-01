@@ -8,27 +8,38 @@ const Drawable = @import("drawable.zig").Drawable;
 
 pub const Line = struct {
     base: Drawable,
-    start: Vec3,
-    end: Vec3,
-    color: Vec3,
 
-    pub fn new(start: Vec3, end: Vec3, color: Vec3) !Line {
-        var line = Line {
-            .base = Drawable.init(.LineSegments),
-            .start = start,
-            .end = end,
-            .color = color,
+    pub fn new(startPos: Vec3, endPos: Vec3, color: Vec3) !Line {
+        const vertices = [_]Vec3{startPos, endPos};
+        var line = Line{
+            .base = try Drawable.init(.LineSegments, .Line, &vertices),
         };
+        line.base.setColor(color);
 
-        try line.generateVertices();
         return line;
     }
 
-    pub fn generateVertices(self: *Line) !void {
-        try self.base.appendVec3(self.start);
-        try self.base.appendVec3(self.color);
+    pub fn setStart(self: *Line, newValue: Vec3) void {
+        self.base.vertices.items[0] = newValue;
+    }
 
-        try self.base.appendVec3(self.end);
-        try self.base.appendVec3(self.color);
+    pub fn start(self: *Line) Vec3 {
+        return self.base.vertices.items[0];
+    }
+
+    pub fn setEnd(self: *Line, newValue: Vec3) void {
+        self.base.vertices.items[1] = newValue;
+    }
+
+    pub fn end(self: *Line) Vec3 {
+        return self.base.vertices.items[1];
+    }
+
+    pub fn generateVertices(drawable: *Drawable) !void {
+        try drawable.appendVec3(drawable.vertices.items[0]);
+        try drawable.appendVec3(drawable.color);
+
+        try drawable.appendVec3(drawable.vertices.items[1]);
+        try drawable.appendVec3(drawable.color);
     }
 };
