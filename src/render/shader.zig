@@ -61,6 +61,10 @@ pub const Shader = struct {
         };
     }
 
+    pub fn deinit(self: Shader) void {
+        c.glDeleteProgram(self.id);
+    }
+
     pub fn use(self: Shader) void {
         c.glUseProgram(self.id);
     }
