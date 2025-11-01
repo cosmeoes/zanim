@@ -14,10 +14,41 @@ const Line = @import("drawables/line.zig").Line;
 const Polygon = @import("drawables/polygon.zig").Polygon;
 const Render = @import("render/render.zig").Renderer;
 const Drawable = @import("drawables/drawable.zig").Drawable;
+const assert = std.debug.assert;
 
 const WindowSize = struct {
     pub var width: c_int = 800;
     pub var height: c_int = 600;
+};
+
+const PreviewState = struct {
+    pub var camara_move: bool = false;
+};
+
+const InputState = struct {
+    const KEY_COUNT = c.GLFW_KEY_LAST + 1;
+    pub var key_is_down: [KEY_COUNT]bool = .{false} ** KEY_COUNT;
+    pub var key_was_down: [KEY_COUNT]bool = .{false} ** KEY_COUNT;
+
+    pub fn update(key: usize, newValue: bool) void {
+        assert(key >= 0);
+        assert(key < KEY_COUNT);
+
+        key_was_down[key] = key_is_down[key];
+        key_is_down[key] = newValue;
+    }
+
+    pub fn justPressed(key: usize) bool {
+        assert(key >= 0);
+        assert(key < KEY_COUNT);
+        return key_is_down[key] and !key_was_down[key];
+    }
+
+    pub fn isPressed(key: usize) bool {
+        assert(key >= 0);
+        assert(key < KEY_COUNT);
+        return key_is_down[key];
+    }
 };
 
 pub fn framebuffer_size_callback(_: ?*c.GLFWwindow, width: c_int, height: c_int ) callconv(.c) void {
@@ -46,6 +77,7 @@ pub fn mouse_callback(_: ?*c.GLFWwindow, xpos: f64, ypos: f64) callconv(.c) void
     lastX = xpos;
     lastY = ypos;
 
+    if (!PreviewState.camara_move) return;
     camera.processMovement(@floatCast(xoffset), @floatCast(yoffset));
 }
 
@@ -94,7 +126,7 @@ pub fn main() !void {
     defer line.base.deinit();
 
     var triangle = try Polygon.new(
-        &[_]Vec3{ 
+        &[_]Vec3{
             Vec3.new(0, 1, 0),
             Vec3.new(1, 0, 0),
             Vec3.new(-1, 0, 0),
@@ -102,28 +134,48 @@ pub fn main() !void {
         Vec3.new(1, 1, 0),
     );
     defer triangle.base.deinit();
+    var rectangle = try Polygon.new(
+        &[_]Vec3{ 
+            Vec3.new(5, 1, 0),
+            Vec3.new(5, 0, 0),
+            Vec3.new(-5, 0, 0),
+            Vec3.new(-5, 1, 0),
+        },
+        Vec3.new(0, 1, 0),
+    );
+    defer rectangle.base.deinit();
+
     while (c.glfwWindowShouldClose(window) != c.GLFW_TRUE) {
-        render.clear(0.2, 0.3, 0.3);
+        updateInput(window);
+        // render.clear(0.2, 0.3, 0.3);
+        render.clear(0, 0, 0);
 
         const currentFrame: f32 = @floatCast(c.glfwGetTime());
         deltaTime = currentFrame - lastFrame;
         lastFrame = currentFrame;
 
-        if (c.glfwGetKey(window, c.GLFW_KEY_W) == c.GLFW_PRESS) {
-            camera.moveFoward(deltaTime);
-        }
-        if (c.glfwGetKey(window, c.GLFW_KEY_S) == c.GLFW_PRESS) {
-            camera.moveBack(deltaTime);
-        }
-        if (c.glfwGetKey(window, c.GLFW_KEY_A) == c.GLFW_PRESS) {
-            camera.moveLeft(deltaTime);
-        }
-        if (c.glfwGetKey(window, c.GLFW_KEY_D) == c.GLFW_PRESS) {
-            camera.moveRight(deltaTime);
+        if (InputState.justPressed(@intCast(c.GLFW_KEY_C))) {
+            PreviewState.camara_move = !PreviewState.camara_move; 
+            if (PreviewState.camara_move) {
+                c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_HIDDEN);
+            } else {
+                c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_NORMAL);
+            }
         }
 
-        if (c.glfwGetKey(window, c.GLFW_KEY_ESCAPE) == c.GLFW_PRESS) {
-            c.glfwSetInputMode(window, c.GLFW_CURSOR, c.GLFW_CURSOR_NORMAL);
+        if (PreviewState.camara_move) {
+            if (InputState.isPressed(c.GLFW_KEY_W)) {
+                camera.moveFoward(deltaTime);
+            }
+            if (InputState.isPressed(c.GLFW_KEY_S)) {
+                camera.moveBack(deltaTime);
+            }
+            if (InputState.isPressed(c.GLFW_KEY_A)) {
+                camera.moveLeft(deltaTime);
+            }
+            if (InputState.isPressed(c.GLFW_KEY_D)) {
+                camera.moveRight(deltaTime);
+            }
         }
 
         const projection = za.perspective(45.0, @as(f32, @floatFromInt(WindowSize.width)) / @as(f32, @floatFromInt(WindowSize.height)), 0.1, 100.0);
@@ -143,7 +195,26 @@ pub fn main() !void {
         render.setModelMatrix(triangle.base.getTransformMatrix());
         render.draw(triangle.base.vertices.items, triangle.base.vertex_mode);
 
+        rectangle.base.translate(Vec3.new(-1, -5, -1));
+        rectangle.base.rotate(angle, Vec3.new(0, 0, 1));
+        render.setModelMatrix(rectangle.base.getTransformMatrix());
+        render.draw(rectangle.base.vertices.items, rectangle.base.vertex_mode);
+
         c.glfwSwapBuffers(window);
         c.glfwPollEvents();
+    }
+}
+
+pub fn updateInput(window: ?*c.GLFWwindow) void {
+    // --- 1. Loop over Printable Keys (ASCII-based, e.g., A-Z, 0-9, etc.) ---
+    // Range is typically GLFW_KEY_SPACE (32) up to GLFW_KEY_GRAVE_ACCENT (96)
+    for (32..97) |keyCode| {
+        InputState.update(keyCode, c.glfwGetKey(window, @intCast(keyCode)) == c.GLFW_PRESS);
+    }
+
+    // --- 2. Loop over Special Keys (e.g., F1-F12, Arrows, Escape, etc.) ---
+    // Range is typically GLFW_KEY_ESCAPE (256) up to GLFW_KEY_LAST (348)
+    for (256..InputState.KEY_COUNT) |keyCode| {
+        InputState.update(keyCode, c.glfwGetKey(window, @intCast(keyCode)) == c.GLFW_PRESS);
     }
 }
