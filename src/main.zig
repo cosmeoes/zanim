@@ -10,13 +10,12 @@ const Vec3 = za.Vec3;
 const Mat4 = za.Mat4;
 const Shader = @import("render/shader.zig").Shader;
 const Camera = @import("render/camera.zig").Camera;
-const Line = @import("drawables/line.zig").Line;
-const Polygon = @import("drawables/polygon.zig").Polygon;
+const Line = @import("drawables/drawable_types.zig").Line;
+const Polygon = @import("drawables/drawable_types.zig").Polygon;
 const Render = @import("render/render.zig").Renderer;
 const Drawable = @import("drawables/drawable.zig").Drawable;
 const Scene = @import("scene.zig").Scene;
 const assert = std.debug.assert;
-const CreateLine = @import("animation/animation.zig").CreateLine;
 const Create = @import("animation/animation.zig").Create;
 
 const WindowSize = struct {

@@ -4,13 +4,7 @@ const Vec3 = za.Vec3;
 const Mat4 = za.Mat4; 
 const geometry = @import("utils/geometry.zig");
 const Transform = @import("utils/transform.zig").Transform;
-const Line = @import("line.zig").Line;
-const Polygon = @import("polygon.zig").Polygon;
-
-const DrawableType = enum {
-    Line,
-    Polygon,
-};
+const drawableTypes = @import("drawable_types.zig");
 
 pub const Drawable = struct {
     vertex_mode: geometry.VertexMode ,
@@ -20,7 +14,7 @@ pub const Drawable = struct {
     color: Vec3,
     // Represents the data that will be used for rendering
     vertex_buffer: std.ArrayList(f32),
-    drawableType: DrawableType, 
+    drawableType: drawableTypes.DrawableType,
 
 
     var global_allocator: std.mem.Allocator = undefined;
@@ -32,7 +26,7 @@ pub const Drawable = struct {
         return global_allocator;
     }
 
-    pub fn init(mode: geometry.VertexMode, drawableType: DrawableType, vertices: []const Vec3) !Drawable {
+    pub fn init(mode: geometry.VertexMode, drawableType: drawableTypes.DrawableType, vertices: []const Vec3) !Drawable {
         var drawable = Drawable{
             .drawableType = drawableType,
             .vertices = .empty,
@@ -83,10 +77,6 @@ pub const Drawable = struct {
 
     pub fn generateVertexBuffer(self: *Drawable) !void {
         self.clearVertexBuffer();
-
-        try switch (self.drawableType) {
-            .Line => Line.generateVertices(self),
-            .Polygon => Polygon.generateVertices(self),
-        };
+        try drawableTypes.generateVerticesUsingType(self);
     }
 };

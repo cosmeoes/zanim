@@ -1,5 +1,5 @@
-const Line = @import("../drawables/line.zig").Line;
-const Polygon = @import("../drawables/polygon.zig").Polygon;
+const Line = @import("../drawables/drawable_types.zig").Line;
+const Polygon = @import("../drawables/drawable_types.zig").Polygon;
 const Drawable = @import("../drawables/drawable.zig").Drawable;
 const Vec3 = @import("zalgebra").Vec3;
 const std = @import("std");
