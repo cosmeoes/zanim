@@ -7,7 +7,7 @@ const za = @import("zalgebra");
 const std = @import("std");
 const geometry = @import("../drawables/utils/geometry.zig");
 const Drawable = @import("../drawables/drawable.zig").Drawable;
-const Mat4 = za.Mat4; 
+const Mat4 = za.Mat4;
 
 pub const Renderer = struct {
     shader: Shader,
@@ -16,6 +16,15 @@ pub const Renderer = struct {
     projection_matrix: Mat4,
     view_matrix: Mat4,
     model_matrix: Mat4,
+
+    pub fn enableDepthTest() void {
+        c.glEnable(c.GL_DEPTH_TEST);
+    }
+
+    pub fn disableDepthTest() void {
+        c.glDisable(c.GL_DEPTH_TEST);
+    }
+
     pub fn new(shader: Shader) Renderer {
         var vao: c_uint = undefined;
         var vbo: c_uint = undefined;
@@ -31,11 +40,6 @@ pub const Renderer = struct {
             .view_matrix = Mat4.identity(),
             .model_matrix = Mat4.identity(),
         };
-    }
-
-    pub fn setAspectRatio(self: *Renderer, aspectRatio: f64) void {
-        self.aspectRatio = aspectRatio;
-        self.projection_matrix = za.perspective(45.0, self.aspectRatio, 0.1, 100.0);
     }
 
     pub fn deinit(self: *Renderer) void {
@@ -93,6 +97,7 @@ pub const Renderer = struct {
     }
 
     pub fn drawDrawable(self: *Renderer, drawable: Drawable) void {
+        self.setModelMatrix(drawable.getTransformMatrix());
         self.draw(drawable.vertex_buffer.items, drawable.vertex_mode);
     }
 

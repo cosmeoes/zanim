@@ -14,6 +14,7 @@ const Line = @import("drawables/line.zig").Line;
 const Polygon = @import("drawables/polygon.zig").Polygon;
 const Render = @import("render/render.zig").Renderer;
 const Drawable = @import("drawables/drawable.zig").Drawable;
+const Scene = @import("scene.zig").Scene;
 const assert = std.debug.assert;
 
 const WindowSize = struct {
@@ -87,6 +88,8 @@ pub fn main() !void {
      defer _ = gpa.deinit();
      const allocator = gpa.allocator();
      Drawable.setUp(allocator);
+     var scene = try Scene.init(allocator);
+     defer scene.deinit();
 
     if (c.glfwInit() != c.GLFW_TRUE) {
         return;
@@ -117,13 +120,13 @@ pub fn main() !void {
     const ourShader = try Shader.new("shaders/vertex.vs", "shaders/frag.fs");
     defer ourShader.deinit();
 
-    c.glBindVertexArray(0);
     var deltaTime: f32 = 0.0;	// Time between current frame and last frame
     var lastFrame: f32 = 0.0; // Time of last frame
     camera = Camera.new(Vec3.new(0.0, 0.0, 3.0));
     var render = Render.new(ourShader);
     var line = try Line.new(Vec3.new(-0.5, -0.5, -0.5), Vec3.new(0.5, 0.5, 0.5), Vec3.new(1, 0, 0));
     defer line.base.deinit();
+    try scene.add(&line.base);
 
     var triangle = try Polygon.new(
         &[_]Vec3{
@@ -134,6 +137,8 @@ pub fn main() !void {
         Vec3.new(1, 1, 0),
     );
     defer triangle.base.deinit();
+    try scene.add(&triangle.base);
+
     var rectangle = try Polygon.new(
         &[_]Vec3{ 
             Vec3.new(5, 1, 0),
@@ -144,6 +149,8 @@ pub fn main() !void {
         Vec3.new(0, 1, 0),
     );
     defer rectangle.base.deinit();
+    try scene.add(&rectangle.base);
+
 
     while (c.glfwWindowShouldClose(window) != c.GLFW_TRUE) {
         updateInput(window);
@@ -178,25 +185,23 @@ pub fn main() !void {
             }
         }
 
+        Render.enableDepthTest();
+
         const projection = za.perspective(45.0, @as(f32, @floatFromInt(WindowSize.width)) / @as(f32, @floatFromInt(WindowSize.height)), 0.1, 100.0);
         render.setViewMatrix(camera.viewMatrix());
         render.setProjectionMatrix(projection);
 
-        c.glEnable(c.GL_DEPTH_TEST);
-
         const angle: f32 = @floatCast(c.glfwGetTime()*50);
         line.base.rotate(angle, Vec3.new(1.0, 0.3, 0.5));
-        render.setModelMatrix(line.base.getTransformMatrix());
-        render.drawDrawable(line.base);
 
         triangle.base.scale(std.math.sin(za.toRadians(angle)));
-        render.setModelMatrix(triangle.base.getTransformMatrix());
-        render.drawDrawable(triangle.base);
 
         rectangle.base.translate(Vec3.new(-1, -5, -1));
         rectangle.base.rotate(angle, Vec3.new(0, 0, 1));
-        render.setModelMatrix(rectangle.base.getTransformMatrix());
-        render.drawDrawable(rectangle.base);
+
+        for (scene.objects.items) |object| {
+            render.drawDrawable(object.*);
+        }
 
         c.glfwSwapBuffers(window);
         c.glfwPollEvents();

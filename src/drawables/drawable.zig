@@ -23,7 +23,7 @@ pub const Drawable = struct {
     pub fn init(mode: geometry.VertexMode) Drawable {
         return .{
             .vertex_mode = mode,
-            .vertex_buffer = std.ArrayList(f32){},
+            .vertex_buffer = .empty,
             .transform = Transform.init(),
         };
     }
