@@ -30,7 +30,7 @@ pub fn main() !void {
     var scene = try engine.createScene();
     defer scene.deinit();
 
-    var triangle = try scene.create(Polygon, try Polygon.new(
+    var triangle = try scene.create(Polygon, try .init(
         scene.a,
         &[_]Vec3{
             Vec3.new(0, 1, 0),
@@ -40,7 +40,7 @@ pub fn main() !void {
         Vec3.new(1, 1, 0),
     ));
 
-    var rectangle = try Polygon.new(
+    var rectangle = try scene.create(Polygon, try .init(
         scene.a,
         &[_]Vec3{ 
             Vec3.new(5, 2, 0),
@@ -49,7 +49,7 @@ pub fn main() !void {
             Vec3.new(-5, 2, 0),
         },
         Vec3.new(0, 1, 0),
-    );
+    ));
     rectangle.base.rotate(90, Vec3.new(0, 0, 1));
 
     var animationsBuffer: [44]*TransformAnim = undefined; 
@@ -59,8 +59,8 @@ pub fn main() !void {
     transform.rotate(-34, Vec3.new(0, 0, 1));
     transform.scaleVec = Vec3.new(0.8, 0.4, 1);
 
-    const transformTriangle = try scene.create(TransformAnim, try TransformAnim.init(scene.a, &triangle.base, transform, 2));
-    const transformRectangle = try scene.create(TransformAnim, try TransformAnim.init(scene.a, &rectangle.base, transform, 2));
+    const transformTriangle = try scene.create(TransformAnim, .init(scene.a, &triangle.base, transform, 2));
+    const transformRectangle = try scene.create(TransformAnim, .init(scene.a, &rectangle.base, transform, 2));
     animations.appendAssumeCapacity(transformTriangle);
     animations.appendAssumeCapacity(transformRectangle);
 
@@ -75,8 +75,8 @@ pub fn main() !void {
         if (i == 0) {
             color = Vec3.new(0.5, 0.5, 0.5);
         }
-        const line = try scene.create(Line, try Line.new(scene.a, Vec3.new(-10.0, floatIndex, 0), Vec3.new(10, floatIndex, 0), color));
-        const transformAnim = try scene.create(TransformAnim, try TransformAnim.init(scene.a, &line.base, transform, 2));
+        const line = try scene.create(Line, try .init(scene.a, Vec3.new(-10.0, floatIndex, 0), Vec3.new(10, floatIndex, 0), color));
+        const transformAnim = try scene.create(TransformAnim, .init(scene.a, &line.base, transform, 2));
         animations.appendAssumeCapacity(transformAnim);
 
         try scene.add(&line.base);
@@ -90,8 +90,8 @@ pub fn main() !void {
         if (i == 0) {
             color = Vec3.new(0.5, 0.5, 0.5);
         }
-        const line = try scene.create(Line, try Line.new(scene.a, Vec3.new(floatIndex, -10, 0), Vec3.new(floatIndex, 10, 0), color));
-        const transformAnim = try scene.create(TransformAnim, try TransformAnim.init(scene.a, &line.base, transform, 2));
+        const line = try scene.create(Line, try .init(scene.a, Vec3.new(floatIndex, -10, 0), Vec3.new(floatIndex, 10, 0), color));
+        const transformAnim = try scene.create(TransformAnim, .init(scene.a, &line.base, transform, 2));
         animations.appendAssumeCapacity(transformAnim);
 
         try scene.add(&line.base);
@@ -118,7 +118,7 @@ pub fn main() !void {
 
     var rotateRect = Transform.init();
     rotateRect.rotate(-90, Vec3.new(0, 0, 1));
-    var rectRotate = try TransformAnim.init(scene.a, &rectangle.base, rotateRect, 2);
+    var rectRotate = TransformAnim.init(scene.a, &rectangle.base, rotateRect, 2);
     try scene.play(rectRotate.asAnimatable());
 
     // Wait 2 seconds

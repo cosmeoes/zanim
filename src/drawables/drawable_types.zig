@@ -20,7 +20,7 @@ pub fn generateVerticesUsingType(drawable: *Drawable) !void {
 pub const Line = struct {
     base: Drawable,
 
-    pub fn new(allocator: std.mem.Allocator, startPos: Vec3, endPos: Vec3, color: Vec3) !Line {
+    pub fn init(allocator: std.mem.Allocator, startPos: Vec3, endPos: Vec3, color: Vec3) error{OutOfMemory}!Line {
         const vertices = [_]Vec3{ startPos, endPos };
         var line = Line{
             .base = try Drawable.init(allocator, .LineSegments, .Line, &vertices),
@@ -62,7 +62,7 @@ pub const Line = struct {
 pub const Polygon = struct {
     base: Drawable,
 
-    pub fn new(allocator: std.mem.Allocator, vertices: []const Vec3, color: Vec3) !Polygon {
+    pub fn init(allocator: std.mem.Allocator, vertices: []const Vec3, color: Vec3) error{OutOfMemory}!Polygon {
         var polygon = Polygon{
             .base = try Drawable.init(allocator, .TriangleMesh, .Polygon, vertices),
         };

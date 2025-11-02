@@ -1,6 +1,7 @@
 const std = @import("std");
 const Drawable = @import("drawables/drawable.zig").Drawable;
 const Animatable = @import("animation/animation.zig").Animatable;
+const DrawableType = @import("drawables/drawable_types.zig").DrawableType;
 
 pub const Scene = struct {
     objects: std.ArrayList(*Drawable),

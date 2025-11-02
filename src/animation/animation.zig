@@ -181,7 +181,7 @@ pub const Create = struct {
     allocator: std.mem.Allocator,
     source_point: Vec3,
 
-    pub fn init(allocator: std.mem.Allocator, drawable: *Drawable, duration: f32) !Create {
+    pub fn init(allocator: std.mem.Allocator, drawable: *Drawable, duration: f32)  error{OutOfMemory}!Create {
         const originalVertices = try drawable.vertices.clone(allocator);
         return .{
             .allocator = allocator,
@@ -236,7 +236,7 @@ pub const TransformAnim = struct {
     allocator: std.mem.Allocator,
     transform: Transform,
 
-    pub fn init(allocator: std.mem.Allocator, drawable: *Drawable, transform: Transform, duration: f32) !TransformAnim {
+    pub fn init(allocator: std.mem.Allocator, drawable: *Drawable, transform: Transform, duration: f32) TransformAnim {
         return .{
             .allocator = allocator,
             .anim = Animation.init(duration),

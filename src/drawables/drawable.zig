@@ -19,7 +19,7 @@ pub const Drawable = struct {
     drawableType: drawableTypes.DrawableType,
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator, mode: geometry.VertexMode, drawableType: drawableTypes.DrawableType, vertices: []const Vec3) !Drawable {
+    pub fn init(allocator: std.mem.Allocator, mode: geometry.VertexMode, drawableType: drawableTypes.DrawableType, vertices: []const Vec3) error{OutOfMemory}!Drawable {
         var drawable = Drawable{
             .drawableType = drawableType,
             .vertices = .empty,
@@ -35,13 +35,13 @@ pub const Drawable = struct {
         return drawable;
     }
 
-    pub fn setColor(self: *Drawable, color: Vec3) void {
-        self.color = color;
-    }
-
     pub fn deinit(self: *Drawable) void {
         self.vertex_buffer.deinit(self.allocator);
         self.vertices.deinit(self.allocator);
+    }
+
+    pub fn setColor(self: *Drawable, color: Vec3) void {
+        self.color = color;
     }
 
     pub fn translate(self: *Drawable, pos: za.Vec3) void {
