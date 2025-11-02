@@ -2,7 +2,7 @@ const za = @import("zalgebra");
 
 pub const Transform = struct {
     position: za.Vec3,
-    rotation: za.Quat,  // or Vec3 for Euler angles
+    rotation: za.Quat,
     scale: za.Vec3,
 
     pub fn init() Transform {

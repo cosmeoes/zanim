@@ -1,6 +1,8 @@
 const Line = @import("../drawables/drawable_types.zig").Line;
 const Polygon = @import("../drawables/drawable_types.zig").Polygon;
 const Drawable = @import("../drawables/drawable.zig").Drawable;
+const Transform = @import("../drawables/utils/transform.zig").Transform;
+const za = @import("zalgebra");
 const Vec3 = @import("zalgebra").Vec3;
 const std = @import("std");
 
@@ -112,6 +114,53 @@ pub const Create = struct {
     }
 
     pub fn asAnimatable(self: *Create) Animatable {
+        return Animatable.init(self);
+    }
+};
+
+pub const TransformAnim = struct {
+    anim: Animation,
+    drawables: *Drawable,
+    original_vertices: std.ArrayList(Vec3),
+    allocator: std.mem.Allocator,
+    transform: Transform,
+
+    pub fn init(allocator: std.mem.Allocator, drawable: *Drawable, transform: Transform, duration: f32) !TransformAnim {
+        const originalVertices = try drawable.vertices.clone(allocator);
+        return .{
+            .allocator = allocator,
+            .anim = Animation.init(duration),
+            .drawable = drawable,
+            .original_vertices = originalVertices,
+            .transform = transform,
+        };
+    }
+
+    pub fn deinit(self: *TransformAnim) void {
+        self.original_vertices.deinit(self.allocator);
+    }
+
+    pub fn update(self: *TransformAnim, dt: f32) void {
+        self.anim.update(dt);
+        const progress = self.anim.getProgress();
+
+        const rotationAngle = self.transform.rotation.extractAxisAngle();
+        const lerpedAngle = za.lerp(f32, 0, rotationAngle.angle, progress);
+        const rotation = za.Quat.fromAxis(lerpedAngle, rotationAngle.axis);
+        const lerpedScale = Vec3.lerp(Vec3.new(1, 1, 1), self.transform.scale, progress);
+
+        for (0..self.drawable.vertices.items.len) |i| {
+            var newVertex = rotation.rotateVec(self.original_vertices.items[i]);
+            newVertex = newVertex.mul(lerpedScale);
+            self.drawable.vertices.items[i] = newVertex;
+        }
+    }
+
+    pub fn isFinished(self: TransformAnim) bool {
+        return self.anim.isFinished();
+    }
+
+    pub fn asAnimatable(self: *TransformAnim) Animatable {
         return Animatable.init(self);
     }
 };
