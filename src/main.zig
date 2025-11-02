@@ -28,82 +28,107 @@ pub fn main() !void {
     var scene = try manim.createScene();
     defer scene.deinit();
 
-    // var triangle = try Polygon.new(
-    //     &[_]Vec3{
-    //         Vec3.new(0, 1, 0),
-    //         Vec3.new(1, 0, 0),
-    //         Vec3.new(-1, 0, 0),
-    //     },
-    //     Vec3.new(1, 1, 0),
-    // );
-    // defer triangle.base.deinit();
-    // var createTriangle = try Create.init(scene.allocator, &triangle.base, 1);
-    // defer createTriangle.deinit();
-    // createTriangle.fromCenter();
-    // try scene.add(&triangle.base);
-    // try scene.play(createTriangle.asAnimatable());
+    var triangle = try Polygon.new(
+        &[_]Vec3{
+            Vec3.new(0, 1, 0),
+            Vec3.new(1, 0, 0),
+            Vec3.new(-1, 0, 0),
+        },
+        Vec3.new(1, 1, 0),
+    );
+    defer triangle.base.deinit();
+    var createTriangle = try Create.init(scene.allocator, &triangle.base, 1);
+    defer createTriangle.deinit();
+    createTriangle.fromCenter();
+    try scene.add(&triangle.base);
+    try scene.play(createTriangle.asAnimatable());
 
-    // var rectangle = try Polygon.new(
-    //     &[_]Vec3{ 
-    //         Vec3.new(5, 1, 0),
-    //         Vec3.new(5, 0, 0),
-    //         Vec3.new(-5, 0, 0),
-    //         Vec3.new(-5, 1, 0),
-    //     },
-    //     Vec3.new(0, 1, 0),
-    // );
-    // defer rectangle.base.deinit();
-    // rectangle.base.translate(Vec3.new(-1, 0, -1));
-    // rectangle.base.rotate(-90, Vec3.new(0, 0, 1));
-    // rectangle.base.scale(1.0/5.0);
-    // try scene.add(&rectangle.base);
-    // var createRectangle = try Create.init(scene.allocator, &rectangle.base, 1);
-    // defer createRectangle.deinit();
-    // try scene.play(createRectangle.asAnimatable());
+    var rectangle = try Polygon.new(
+        &[_]Vec3{ 
+            Vec3.new(5, 1, 0),
+            Vec3.new(5, 0, 0),
+            Vec3.new(-5, 0, 0),
+            Vec3.new(-5, 1, 0),
+        },
+        Vec3.new(0, 1, 0),
+    );
+    defer rectangle.base.deinit();
+    rectangle.base.translate(Vec3.new(-1, 0, 0));
+    rectangle.base.rotate(-90, Vec3.new(0, 0, 1));
+    rectangle.base.scale(1.0/5.0);
+    try scene.add(&rectangle.base);
+    var createRectangle = try Create.init(scene.allocator, &rectangle.base, 1);
+    defer createRectangle.deinit();
+    try scene.play(createRectangle.asAnimatable());
 
-    // var line = try Line.new(Vec3.new(-0.5, -0.5, 0), Vec3.new(0.5, 0.5, 0), Vec3.new(1, 0, 0));
-    // defer line.base.deinit();
-    // var createLine = try Create.init(scene.allocator, &line.base, 14);
-    // defer createLine.deinit();
-    // try scene.add(&line.base);
-    // try scene.play(createLine.asAnimatable());
+    var transform = Transform.init();
+    transform.rotation = za.Quat.fromAxis(-34, Vec3.new(0, 0, 1));
+    transform.scale = Vec3.new(1, 0.4, 0.5);
 
-    var transformX = Transform.init();
-    transformX.rotation = za.Quat.fromAxis(-90, Vec3.new(0, 0, 1));
-    // transformX.scale = Vec3.new(1, 0.4, 0.5);
+    var transformTriangle = try TransformAnim.init(allocator, &triangle.base, transform, 2);
+    defer transformTriangle.deinit();
+    try scene.play(transformTriangle.asAnimatable());
 
-    var transformY = Transform.init();
-    transformY.rotation = za.Quat.fromAxis(90, Vec3.new(0, 0, 1));
+    var transformRectangle = try TransformAnim.init(allocator, &rectangle.base, transform, 2);
+    defer transformTriangle.deinit();
+    try scene.play(transformRectangle.asAnimatable());
+
+    var gridLines: std.ArrayList(Line) = try .initCapacity(allocator, 40);
+    defer gridLines.deinit(allocator);
+    var animations: std.ArrayList(TransformAnim) = try .initCapacity(allocator, 40);
+    defer animations.deinit(allocator);
 
     // X axis
     var i: i32 = -10;
-    while (i < 11) : (i += 1) {
+    while (i < 10) : (i += 1) {
         const floatIndex: f32 = @floatFromInt(i);
-        var xLine = try allocator.create(Line);
-        const transformAnim = try allocator.create(TransformAnim);
+        var color = Vec3.new(0, 1, 1);
+        if (i == 0) {
+            color = Vec3.new(0.5, 0.5, 0.5);
+        }
 
-        xLine.* = try Line.new(Vec3.new(-10.0, floatIndex, 0), Vec3.new(10, floatIndex, 0), Vec3.new(1, 0, 0));
-        transformAnim.* = try TransformAnim.init(allocator, &xLine.base, transformX, 2);
+        const line = try Line.new(Vec3.new(-10.0, floatIndex, 0), Vec3.new(10, floatIndex, 0), color);
+        gridLines.appendAssumeCapacity(line);
+        const linePtr = &gridLines.items[gridLines.items.len - 1];
 
-        try scene.add(&xLine.base);
-        try scene.play(transformAnim.asAnimatable());
+        const transformAnim = try TransformAnim.init(allocator, &linePtr.base, transform, 2);
+        animations.appendAssumeCapacity(transformAnim);
+        const transformAnimPtr = &animations.items[animations.items.len - 1];
+
+        try scene.add(&linePtr.base);
+        try scene.play(transformAnimPtr.asAnimatable());
     }
 
     i = -10;
-    while (i < 11) : (i += 1) {
+    while (i < 10) : (i += 1) {
         const floatIndex: f32 = @floatFromInt(i);
-        const transformAnim = try allocator.create(TransformAnim);
+        var color = Vec3.new(0, 1, 1);
+        if (i == 0) {
+            color = Vec3.new(0.5, 0.5, 0.5);
+        }
 
-        var yLine = try allocator.create(Line);
-        yLine.* = try Line.new(Vec3.new(floatIndex, -10, 0), Vec3.new(floatIndex, 10, 0), Vec3.new(1, 1, 0));
-        transformAnim.* = try TransformAnim.init(allocator, &yLine.base, transformY, 2);
+        const line = try Line.new(Vec3.new(floatIndex, -10, 0), Vec3.new(floatIndex, 10, 0), color);
 
-        try scene.add(&yLine.base);
-        try scene.play(transformAnim.asAnimatable());
+        gridLines.appendAssumeCapacity(line);
+        const linePtr = &gridLines.items[gridLines.items.len - 1];
+
+        const transformAnim = try TransformAnim.init(allocator, &linePtr.base, transform, 2);
+        animations.appendAssumeCapacity(transformAnim);
+        const transformAnimPtr = &animations.items[animations.items.len - 1];
+
+        try scene.add(&linePtr.base);
+        try scene.play(transformAnimPtr.asAnimatable());
     }
 
     try manim.preview(&scene, .{
         .width = 1280,
         .height = 720,
     });
+
+    for (gridLines.items) |*item| {
+        item.base.deinit();
+    }
+    for (animations.items) |*item| {
+        item.deinit();
+    }
 }

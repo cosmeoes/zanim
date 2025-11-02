@@ -43,7 +43,7 @@ pub const Animatable = struct {
 pub const Animation = struct {
     duration: f32,
     elapsed: f32,
-    finished: bool, 
+    finished: bool,
 
     pub fn init(duration: f32) Animation {
         return .{
@@ -120,7 +120,7 @@ pub const Create = struct {
 
 pub const TransformAnim = struct {
     anim: Animation,
-    drawables: *Drawable,
+    drawable: *Drawable,
     original_vertices: std.ArrayList(Vec3),
     allocator: std.mem.Allocator,
     transform: Transform,
