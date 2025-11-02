@@ -44,6 +44,7 @@ pub const Scene = struct {
         if (self.current_animation) |animation| {
             animation.update(dt);
             if (animation.isFinished()) {
+                animation.finalize();
                 self.current_animation = null;
             }
         }

@@ -50,6 +50,7 @@ pub fn main() !void {
         Vec3.new(0, 1, 0),
     );
     defer rectangle.base.deinit();
+    rectangle.base.rotate(90, Vec3.new(0, 0, 1));
 
     var gridLines: std.ArrayList(Line) = try .initCapacity(allocator, 44);
     defer gridLines.deinit(allocator);
@@ -57,8 +58,8 @@ pub fn main() !void {
     defer animations.deinit(allocator);
 
     var transform = Transform.init();
-    transform.rotation = za.Quat.fromAxis(-34, Vec3.new(0, 0, 1));
-    transform.scale = Vec3.new(0.8, 0.4, 1);
+    transform.rotate(-34, Vec3.new(0, 0, 1));
+    transform.scaleVec = Vec3.new(0.8, 0.4, 1);
 
     const transformTriangle = try TransformAnim.init(allocator, &triangle.base, transform, 2);
     const transformRectangle = try TransformAnim.init(allocator, &rectangle.base, transform, 2);
@@ -129,6 +130,12 @@ pub fn main() !void {
     });
     defer createGroup.deinit();
     try scene.play(createGroup.asAnimatable());
+
+    var rotateRect = Transform.init();
+    rotateRect.rotate(-90, Vec3.new(0, 0, 1));
+    var rectRotate = try TransformAnim.init(allocator, &rectangle.base, rotateRect, 2);
+    defer rectRotate.deinit();
+    try scene.play(rectRotate.asAnimatable());
 
     // Wait 2 seconds
     var waitAnim = Wait.init(2);

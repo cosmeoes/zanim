@@ -10,10 +10,12 @@ pub const Animatable = struct {
     ptr: *anyopaque,
     updateFn: *const fn (*anyopaque, f32) void,
     isFinishedFn: *const fn (*anyopaque) bool,
-    getDurationFn: *const fn(*anyopaque) f32,
+    getDurationFn: *const fn (*anyopaque) f32,
+    finalizeFn: *const fn (*anyopaque) void,
 
     pub fn init(ptr: anytype) Animatable {
         const T = @TypeOf(ptr.*);
+
         const gen = struct {
             fn update(pointer: *anyopaque, dt: f32) void {
                 const self: *T = @ptrCast(@alignCast(pointer));
@@ -27,13 +29,18 @@ pub const Animatable = struct {
                 const self: *T = @ptrCast(@alignCast(pointer));
                 return self.getDuration();
             }
+            fn finalize(pointer: *anyopaque) void {
+                const self: *T = @ptrCast(@alignCast(pointer));
+                return self.finalize();
+            }
         };
 
         return .{
             .ptr = ptr,
             .updateFn = gen.update,
             .isFinishedFn = gen.isFinished,
-            .getDurationFn = gen.getDuration
+            .getDurationFn = gen.getDuration,
+            .finalizeFn = gen.finalize,
         };
     }
 
@@ -47,6 +54,10 @@ pub const Animatable = struct {
 
     pub fn getDuration(self: Animatable) f32 {
         return self.getDurationFn(self.ptr);
+    }
+
+    pub fn finalize(self: Animatable) void {
+        return self.finalizeFn(self.ptr);
     }
 };
 
@@ -122,6 +133,12 @@ pub const AnimationGroup = struct {
         return self.anim.duration;
     }
 
+    pub fn finalize(self: AnimationGroup) void {
+        for (self.animations.items) |animation| {
+            animation.finalize();
+        }
+    }
+
     pub fn asAnimatable(self: *AnimationGroup) Animatable {
         return Animatable.init(self);
     }
@@ -146,6 +163,10 @@ pub const Wait = struct {
 
     pub fn getDuration(self: Wait) f32 {
         return self.anim.duration;
+    }
+
+    pub fn finalize(self: Wait) void {
+        _ = self;
     }
 
     pub fn asAnimatable(self: *Wait) Animatable {
@@ -200,6 +221,10 @@ pub const Create = struct {
         return self.anim.duration;
     }
 
+    pub fn finalize(self: Create) void {
+        _ = self;
+    }
+
     pub fn asAnimatable(self: *Create) Animatable {
         return Animatable.init(self);
     }
@@ -208,25 +233,20 @@ pub const Create = struct {
 pub const TransformAnim = struct {
     anim: Animation,
     drawable: *Drawable,
-    original_vertices: std.ArrayList(Vec3),
-    original_tranform: Transform,
     allocator: std.mem.Allocator,
     transform: Transform,
 
     pub fn init(allocator: std.mem.Allocator, drawable: *Drawable, transform: Transform, duration: f32) !TransformAnim {
-        const originalVertices = try drawable.vertices.clone(allocator);
         return .{
             .allocator = allocator,
             .anim = Animation.init(duration),
             .drawable = drawable,
-            .original_vertices = originalVertices,
-            .original_tranform = drawable.transform,
             .transform = transform,
         };
     }
 
     pub fn deinit(self: *TransformAnim) void {
-        self.original_vertices.deinit(self.allocator);
+        _ = self;
     }
 
     pub fn update(self: *TransformAnim, dt: f32) void {
@@ -241,9 +261,9 @@ pub const TransformAnim = struct {
             progress
         );
 
-        self.drawable.anim_transform.scale = Vec3.lerp(
+        self.drawable.anim_transform.scaleVec = Vec3.lerp(
             Vec3.one(),
-            self.transform.scale,
+            self.transform.scaleVec,
             progress
         );
 
@@ -262,7 +282,13 @@ pub const TransformAnim = struct {
         return self.anim.duration;
     }
 
+    pub fn finalize(self: TransformAnim) void {
+        self.drawable.transform = self.drawable.transform.combine(self.drawable.anim_transform);
+        self.drawable.anim_transform = Transform.init();
+    }
+
     pub fn asAnimatable(self: *TransformAnim) Animatable {
         return Animatable.init(self);
     }
+
 };

@@ -53,18 +53,15 @@ pub const Drawable = struct {
     }
 
     pub fn translate(self: *Drawable, pos: za.Vec3) void {
-        self.transform.position = pos;
+        self.transform.translate(pos);
     }
 
     pub fn rotate(self: *Drawable, angle: f32, axis: za.Vec3) void {
-        // the rotation gets applied around the world origin, insted of the
-        // objects own center, (when you translate the object).
-        // This will cause issues in the future but it's fine for now.
-        self.transform.rotation = za.Quat.fromAxis(angle, axis);
+        self.transform.rotate(angle, axis);
     }
 
     pub fn scale(self: *Drawable, scalar: f32) void {
-        self.transform.scale = za.Vec3.new(1, 1, 1).scale(scalar);
+        self.transform.scale(scalar);
     }
 
     pub fn getTransformMatrix(self: Drawable) za.Mat4 {
