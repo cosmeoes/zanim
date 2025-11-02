@@ -15,12 +15,13 @@ const assert = std.debug.assert;
 pub const PreviewConfig = struct {
     width: u32 = 1280,
     height: u32 = 720,
-    title: []const u8 = "Animation Preview"
+    title: []const u8 = "Animation Preview",
 };
 
 // Global camera because I don't want to fix it right now
 // should work for while, maybe forever.
 // Probs fixable with a hashmap from window -> Previewer instance
+// or i think you can add a custom pointer to the glfw window
 var g_first_mouse: bool = true;
 var g_last_mouse_x: f64 = 0.0;
 var g_last_mouse_y: f64 = 0.0;
@@ -38,7 +39,6 @@ pub const Previewer = struct {
     input_state: InputState,
 
     pub fn init(allocator: std.mem.Allocator, config: PreviewConfig) !Previewer {
-
         if (c.glfwInit() != c.GLFW_TRUE) {
             return error.GlfwInitFailed;
         }
@@ -146,25 +146,25 @@ pub const Previewer = struct {
         }
     }
 
-    pub fn framebuffer_size_callback(_: ?*c.GLFWwindow, width: c_int, height: c_int ) callconv(.c) void {
+    pub fn framebuffer_size_callback(_: ?*c.GLFWwindow, width: c_int, height: c_int) callconv(.c) void {
         c.glViewport(0, 0, width, height);
     }
 
-    pub fn error_callback(errCode: c_int, message: [*c]const u8)  callconv(.c) void {
-        std.log.err("GLFW error: {d}, {s}", .{errCode, message});
+    pub fn error_callback(errCode: c_int, message: [*c]const u8) callconv(.c) void {
+        std.log.err("GLFW error: {d}, {s}", .{ errCode, message });
     }
 
     pub fn mouse_callback(_: ?*c.GLFWwindow, xpos: f64, ypos: f64) callconv(.c) void {
-       if (g_first_mouse) {
-           g_last_mouse_x = xpos; 
-           g_last_mouse_y = ypos; 
-           g_first_mouse = false;
+        if (g_first_mouse) {
+            g_last_mouse_x = xpos;
+            g_last_mouse_y = ypos;
+            g_first_mouse = false;
         }
 
         const xoffset = xpos - g_last_mouse_x;
-        const yoffset = g_last_mouse_y - ypos; 
-        g_last_mouse_x = xpos; 
-        g_last_mouse_y = ypos; 
+        const yoffset = g_last_mouse_y - ypos;
+        g_last_mouse_x = xpos;
+        g_last_mouse_y = ypos;
 
         if (!g_camera_move) return;
         g_camera.processMovement(@floatCast(xoffset), @floatCast(yoffset));

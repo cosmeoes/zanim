@@ -2,6 +2,7 @@ const std = @import("std");
 const Drawable = @import("drawables/drawable.zig").Drawable;
 const Animatable = @import("animation/animation.zig").Animatable;
 const DrawableType = @import("drawables/drawable_types.zig").DrawableType;
+const Wait = @import("animation/animation.zig").Wait;
 
 pub const Scene = struct {
     objects: std.ArrayList(*Drawable),
@@ -30,6 +31,12 @@ pub const Scene = struct {
 
     pub fn play(self: *Scene, animation: Animatable) !void {
         try self.animation_queue.append(self.a, animation);
+    }
+
+    pub fn wait(self: *Scene, duration: f32) error{OutOfMemory}!void {
+        const waitAnim = try self.a.create(Wait);
+        waitAnim.* = Wait.init(duration);
+        try self.play(waitAnim.asAnimatable());
     }
 
     pub fn update(self: *Scene, dt: f32) void {

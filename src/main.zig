@@ -122,8 +122,7 @@ pub fn main() !void {
     try scene.play(rectRotate.asAnimatable());
 
     // Wait 2 seconds
-    var waitAnim = Wait.init(2);
-    try scene.play(waitAnim.asAnimatable());
+    try scene.wait(2);
 
     // Play in parallel all the transform animations
     var animationGroup = try AnimationGroup.init(scene.a, animatables);
