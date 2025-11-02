@@ -17,18 +17,9 @@ pub const Drawable = struct {
     // Represents the data that will be used for rendering
     vertex_buffer: std.ArrayList(f32),
     drawableType: drawableTypes.DrawableType,
+    allocator: std.mem.Allocator,
 
-
-    var global_allocator: std.mem.Allocator = undefined;
-    pub fn setUp(allocator: std.mem.Allocator) void {
-        global_allocator = allocator;
-    }
-
-    pub fn getAllocator() std.mem.Allocator {
-        return global_allocator;
-    }
-
-    pub fn init(mode: geometry.VertexMode, drawableType: drawableTypes.DrawableType, vertices: []const Vec3) !Drawable {
+    pub fn init(allocator: std.mem.Allocator, mode: geometry.VertexMode, drawableType: drawableTypes.DrawableType, vertices: []const Vec3) !Drawable {
         var drawable = Drawable{
             .drawableType = drawableType,
             .vertices = .empty,
@@ -37,9 +28,10 @@ pub const Drawable = struct {
             .transform = Transform.init(),
             .anim_transform = Transform.init(),
             .color  = Vec3.new(1, 1, 1),
+            .allocator = allocator,
         };
 
-        try drawable.vertices.appendSlice(global_allocator, vertices);
+        try drawable.vertices.appendSlice(allocator, vertices);
         return drawable;
     }
 
@@ -48,8 +40,8 @@ pub const Drawable = struct {
     }
 
     pub fn deinit(self: *Drawable) void {
-        self.vertex_buffer.deinit(global_allocator);
-        self.vertices.deinit(global_allocator);
+        self.vertex_buffer.deinit(self.allocator);
+        self.vertices.deinit(self.allocator);
     }
 
     pub fn translate(self: *Drawable, pos: za.Vec3) void {
@@ -75,9 +67,9 @@ pub const Drawable = struct {
     }
 
     pub fn appendVec3(self: *Drawable, value: Vec3) !void {
-        try self.vertex_buffer.append(Drawable.getAllocator(), value.x());
-        try self.vertex_buffer.append(Drawable.getAllocator(), value.y());
-        try self.vertex_buffer.append(Drawable.getAllocator(), value.z());
+        try self.vertex_buffer.append(self.allocator, value.x());
+        try self.vertex_buffer.append(self.allocator, value.y());
+        try self.vertex_buffer.append(self.allocator, value.z());
     }
 
     pub fn generateVertexBuffer(self: *Drawable) !void {

@@ -97,7 +97,7 @@ pub fn build(b: *std.Build) void {
 
     // Add include path for GLAD headers
     exe.addIncludePath(b.path("libs/glad/include"));
-    
+
     exe.linkSystemLibrary("c");
     exe.linkSystemLibrary("glfw");
     // This declares intent for the executable to be installed into the

@@ -1,7 +1,7 @@
 const std = @import("std");
 const za = @import("zalgebra");
-const Vec3 = za.Vec3; 
-const Mat4 = za.Mat4; 
+const Vec3 = za.Vec3;
+const Mat4 = za.Mat4;
 const Drawable = @import("drawable.zig").Drawable;
 const geometry = @import("utils/geometry.zig");
 
@@ -20,14 +20,18 @@ pub fn generateVerticesUsingType(drawable: *Drawable) !void {
 pub const Line = struct {
     base: Drawable,
 
-    pub fn new(startPos: Vec3, endPos: Vec3, color: Vec3) !Line {
-        const vertices = [_]Vec3{startPos, endPos};
+    pub fn new(allocator: std.mem.Allocator, startPos: Vec3, endPos: Vec3, color: Vec3) !Line {
+        const vertices = [_]Vec3{ startPos, endPos };
         var line = Line{
-            .base = try Drawable.init(.LineSegments, .Line, &vertices),
+            .base = try Drawable.init(allocator, .LineSegments, .Line, &vertices),
         };
         line.base.setColor(color);
 
         return line;
+    }
+
+    pub fn deinit(self: *Line) void {
+        self.base.deinit();
     }
 
     pub fn setStart(self: *Line, newValue: Vec3) void {
@@ -58,13 +62,17 @@ pub const Line = struct {
 pub const Polygon = struct {
     base: Drawable,
 
-    pub fn new(vertices: []const Vec3, color: Vec3) !Polygon {
+    pub fn new(allocator: std.mem.Allocator, vertices: []const Vec3, color: Vec3) !Polygon {
         var polygon = Polygon{
-            .base = try Drawable.init(.TriangleMesh, .Polygon, vertices),
+            .base = try Drawable.init(allocator, .TriangleMesh, .Polygon, vertices),
         };
         polygon.base.setColor(color);
 
         return polygon;
+    }
+
+    pub fn deinit(self: *Polygon) void {
+        self.base.deinit();
     }
 
     pub fn generateVertices(drawable: *Drawable) !void {
@@ -74,7 +82,7 @@ pub const Polygon = struct {
         for (drawable.vertices.items, 0..) |v1, i| {
             if (i == drawable.vertices.items.len - 1) break;
 
-            const v2 = drawable.vertices.items[i+1];
+            const v2 = drawable.vertices.items[i + 1];
             try drawable.appendVec3(firstVertex);
             try drawable.appendVec3(drawable.color);
 

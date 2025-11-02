@@ -6,28 +6,29 @@ pub const Scene = struct {
     objects: std.ArrayList(*Drawable),
     animation_queue: std.ArrayList(Animatable),
     current_animation: ?Animatable,
-    allocator: std.mem.Allocator,
+    arena: *std.heap.ArenaAllocator,
+    a: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator) !Scene {
-        return Scene{
-            .objects = .empty, 
-            .animation_queue= .empty,
-            .current_animation= null,
-            .allocator = allocator,
+    pub fn init(arena: *std.heap.ArenaAllocator) !Scene {
+        return .{
+            .objects = .empty,
+            .animation_queue = .empty,
+            .current_animation = null,
+            .arena = arena,
+            .a = arena.allocator(),
         };
     }
 
     pub fn deinit(self: *Scene) void {
-        self.objects.deinit(self.allocator);
-        self.animation_queue.deinit(self.allocator);
+        self.arena.deinit();
     }
 
     pub fn add(self: *Scene, drawable: *Drawable) !void {
-        try self.objects.append(self.allocator, drawable);
+        try self.objects.append(self.a, drawable);
     }
 
     pub fn play(self: *Scene, animation: Animatable) !void {
-        try self.animation_queue.append(self.allocator, animation);
+        try self.animation_queue.append(self.a, animation);
     }
 
     pub fn update(self: *Scene, dt: f32) void {
@@ -48,6 +49,12 @@ pub const Scene = struct {
                 self.current_animation = null;
             }
         }
+    }
+
+    pub fn create(self: *Scene, comptime wanted: type, value: wanted) error{OutOfMemory}!*wanted {
+        const created = try self.a.create(wanted);
+        created.* = value;
+        return created;
     }
 };
 
