@@ -12,8 +12,11 @@ const Drawable = @import("drawables/drawable.zig").Drawable;
 const Scene = @import("scene.zig").Scene;
 const Create = @import("animation/animation.zig").Create;
 const TransformAnim = @import("animation/animation.zig").TransformAnim;
+const AnimationGroup = @import("animation/animation.zig").AnimationGroup;
+const Animatable = @import("animation/animation.zig").Animatable;
 const Transform = @import("drawables/utils/transform.zig").Transform;
 const Engine = @import("engine.zig").Engine;
+const Wait = @import("animation/animation.zig").Wait;
 
 pub fn main() !void {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
@@ -22,10 +25,9 @@ pub fn main() !void {
 
     Drawable.setUp(allocator);
     // Initialize the library
-    var manim = try Engine.init(allocator);
-
+    var engine = try Engine.init(allocator);
     // Create your scene
-    var scene = try manim.createScene();
+    var scene = try engine.createScene();
     defer scene.deinit();
 
     var triangle = try Polygon.new(
@@ -37,50 +39,38 @@ pub fn main() !void {
         Vec3.new(1, 1, 0),
     );
     defer triangle.base.deinit();
-    var createTriangle = try Create.init(scene.allocator, &triangle.base, 1);
-    defer createTriangle.deinit();
-    createTriangle.fromCenter();
-    try scene.add(&triangle.base);
-    try scene.play(createTriangle.asAnimatable());
 
     var rectangle = try Polygon.new(
         &[_]Vec3{ 
+            Vec3.new(5, 2, 0),
             Vec3.new(5, 1, 0),
-            Vec3.new(5, 0, 0),
-            Vec3.new(-5, 0, 0),
             Vec3.new(-5, 1, 0),
+            Vec3.new(-5, 2, 0),
         },
         Vec3.new(0, 1, 0),
     );
     defer rectangle.base.deinit();
-    rectangle.base.translate(Vec3.new(-1, 0, 0));
-    rectangle.base.rotate(-90, Vec3.new(0, 0, 1));
-    rectangle.base.scale(1.0/5.0);
-    try scene.add(&rectangle.base);
-    var createRectangle = try Create.init(scene.allocator, &rectangle.base, 1);
-    defer createRectangle.deinit();
-    try scene.play(createRectangle.asAnimatable());
+
+    var gridLines: std.ArrayList(Line) = try .initCapacity(allocator, 44);
+    defer gridLines.deinit(allocator);
+    var animations: std.ArrayList(TransformAnim) = try .initCapacity(allocator, 44);
+    defer animations.deinit(allocator);
 
     var transform = Transform.init();
-    transform.rotation = za.Quat.fromAxis(-34, Vec3.new(0, 0, 1));
-    transform.scale = Vec3.new(1, 0.4, 0.5);
+    transform.rotation = za.Quat.fromAxis(-34, Vec3.new(1, 0, 0.5));
+    transform.scale = Vec3.new(0.8, 0.4, 0.5);
 
-    var transformTriangle = try TransformAnim.init(allocator, &triangle.base, transform, 2);
-    defer transformTriangle.deinit();
-    try scene.play(transformTriangle.asAnimatable());
+    const transformTriangle = try TransformAnim.init(allocator, &triangle.base, transform, 2);
+    const transformRectangle = try TransformAnim.init(allocator, &rectangle.base, transform, 2);
+    animations.appendAssumeCapacity(transformTriangle);
+    animations.appendAssumeCapacity(transformRectangle);
 
-    var transformRectangle = try TransformAnim.init(allocator, &rectangle.base, transform, 2);
-    defer transformTriangle.deinit();
-    try scene.play(transformRectangle.asAnimatable());
-
-    var gridLines: std.ArrayList(Line) = try .initCapacity(allocator, 40);
-    defer gridLines.deinit(allocator);
-    var animations: std.ArrayList(TransformAnim) = try .initCapacity(allocator, 40);
-    defer animations.deinit(allocator);
+    try scene.add(&triangle.base);
+    try scene.add(&rectangle.base);
 
     // X axis
     var i: i32 = -10;
-    while (i < 10) : (i += 1) {
+    while (i < 11) : (i += 1) {
         const floatIndex: f32 = @floatFromInt(i);
         var color = Vec3.new(0, 1, 1);
         if (i == 0) {
@@ -93,14 +83,13 @@ pub fn main() !void {
 
         const transformAnim = try TransformAnim.init(allocator, &linePtr.base, transform, 2);
         animations.appendAssumeCapacity(transformAnim);
-        const transformAnimPtr = &animations.items[animations.items.len - 1];
 
         try scene.add(&linePtr.base);
-        try scene.play(transformAnimPtr.asAnimatable());
     }
 
+    // Y axis
     i = -10;
-    while (i < 10) : (i += 1) {
+    while (i < 11) : (i += 1) {
         const floatIndex: f32 = @floatFromInt(i);
         var color = Vec3.new(0, 1, 1);
         if (i == 0) {
@@ -114,13 +103,43 @@ pub fn main() !void {
 
         const transformAnim = try TransformAnim.init(allocator, &linePtr.base, transform, 2);
         animations.appendAssumeCapacity(transformAnim);
-        const transformAnimPtr = &animations.items[animations.items.len - 1];
 
         try scene.add(&linePtr.base);
-        try scene.play(transformAnimPtr.asAnimatable());
     }
 
-    try manim.preview(&scene, .{
+    const animatables: []Animatable = try allocator.alloc(Animatable, animations.items.len);
+    defer allocator.free(animatables);
+    for (animations.items, 0..) |*trans, index| {
+        animatables[index] = trans.asAnimatable();
+    }
+
+    // Triangle grow animation
+    var createTriangle = try Create.init(scene.allocator, &triangle.base, 1);
+    defer createTriangle.deinit();
+    createTriangle.fromCenter();
+
+    // rectangle grow animation
+    var createRectangle = try Create.init(scene.allocator, &rectangle.base, 1);
+    defer createRectangle.deinit();
+
+    // Play them in parallel
+    var createGroup = try AnimationGroup.init(allocator, &[_]Animatable{
+        createTriangle.asAnimatable(),
+        createRectangle.asAnimatable(),
+    });
+    defer createGroup.deinit();
+    try scene.play(createGroup.asAnimatable());
+
+    // Wait 2 seconds
+    var waitAnim = Wait.init(2);
+    try scene.play(waitAnim.asAnimatable());
+
+    // Play in parallel all the transform animations
+    var animationGroup = try AnimationGroup.init(allocator, animatables);
+    defer animationGroup.deinit();
+    try scene.play(animationGroup.asAnimatable());
+
+    try engine.preview(&scene, .{
         .width = 1280,
         .height = 720,
     });
@@ -128,6 +147,7 @@ pub fn main() !void {
     for (gridLines.items) |*item| {
         item.base.deinit();
     }
+
     for (animations.items) |*item| {
         item.deinit();
     }

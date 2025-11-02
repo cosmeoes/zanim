@@ -1,11 +1,9 @@
-
 const std = @import("std");
 const za = @import("zalgebra");
 const Vec3 = za.Vec3; 
 const Mat4 = za.Mat4; 
 const Drawable = @import("drawable.zig").Drawable;
 const geometry = @import("utils/geometry.zig");
-const Transform = @import("utils/transform.zig").Transform;
 
 pub const DrawableType = enum {
     Line,

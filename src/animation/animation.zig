@@ -10,6 +10,7 @@ pub const Animatable = struct {
     ptr: *anyopaque,
     updateFn: *const fn (*anyopaque, f32) void,
     isFinishedFn: *const fn (*anyopaque) bool,
+    getDurationFn: *const fn(*anyopaque) f32,
 
     pub fn init(ptr: anytype) Animatable {
         const T = @TypeOf(ptr.*);
@@ -22,12 +23,17 @@ pub const Animatable = struct {
                 const self: *T = @ptrCast(@alignCast(pointer));
                 return self.isFinished();
             }
+            fn getDuration(pointer: *anyopaque) f32 {
+                const self: *T = @ptrCast(@alignCast(pointer));
+                return self.getDuration();
+            }
         };
 
         return .{
             .ptr = ptr,
             .updateFn = gen.update,
             .isFinishedFn = gen.isFinished,
+            .getDurationFn = gen.getDuration
         };
     }
 
@@ -37,6 +43,10 @@ pub const Animatable = struct {
 
     pub fn isFinished(self: Animatable) bool {
         return self.isFinishedFn(self.ptr);
+    }
+
+    pub fn getDuration(self: Animatable) f32 {
+        return self.getDurationFn(self.ptr);
     }
 };
 
@@ -67,6 +77,79 @@ pub const Animation = struct {
 
     pub fn isFinished(self: Animation) bool {
         return self.finished;
+    }
+};
+
+pub const AnimationGroup = struct {
+    anim: Animation,
+    animations: std.ArrayList(Animatable),
+    allocator: std.mem.Allocator,
+
+    pub fn init(allocator: std.mem.Allocator, animations: []const Animatable) !AnimationGroup {
+        var maxDuration: f32 = 0;
+        for (animations) |anim| {
+            maxDuration = @max(maxDuration, anim.getDuration());
+        }
+        var group = AnimationGroup{
+            .anim = Animation.init(maxDuration),
+            .animations = .empty,
+            .allocator = allocator,
+        };
+
+        try group.animations.appendSlice(allocator, animations);
+        return group;
+    }
+
+    pub fn deinit(self: *AnimationGroup) void {
+        self.animations.deinit(self.allocator);
+    }
+
+    pub fn update(self: *AnimationGroup, dt: f32) void {
+        self.anim.update(dt);
+
+        for (self.animations.items) |animation| {
+            if (!animation.isFinished()) {
+                animation.update(dt);
+            }
+        }
+    }
+
+    pub fn isFinished(self: AnimationGroup) bool {
+        return self.anim.isFinished();
+    }
+
+    pub fn getDuration(self: AnimationGroup) f32 {
+        return self.anim.duration;
+    }
+
+    pub fn asAnimatable(self: *AnimationGroup) Animatable {
+        return Animatable.init(self);
+    }
+};
+
+pub const Wait = struct {
+    anim: Animation,
+
+    pub fn init(duration: f32) Wait {
+        return .{
+            .anim = Animation.init(duration),
+        };
+    }
+
+    pub fn update(self: *Wait, dt: f32) void {
+        self.anim.update(dt);
+    }
+
+    pub fn isFinished(self: Wait) bool {
+        return self.anim.isFinished();
+    }
+
+    pub fn getDuration(self: Wait) f32 {
+        return self.anim.duration;
+    }
+
+    pub fn asAnimatable(self: *Wait) Animatable {
+        return Animatable.init(self);
     }
 };
 
@@ -113,6 +196,10 @@ pub const Create = struct {
         return self.anim.isFinished();
     }
 
+    pub fn getDuration(self: Create) f32 {
+        return self.anim.duration;
+    }
+
     pub fn asAnimatable(self: *Create) Animatable {
         return Animatable.init(self);
     }
@@ -122,6 +209,7 @@ pub const TransformAnim = struct {
     anim: Animation,
     drawable: *Drawable,
     original_vertices: std.ArrayList(Vec3),
+    original_tranform: Transform,
     allocator: std.mem.Allocator,
     transform: Transform,
 
@@ -132,6 +220,7 @@ pub const TransformAnim = struct {
             .anim = Animation.init(duration),
             .drawable = drawable,
             .original_vertices = originalVertices,
+            .original_tranform = drawable.transform,
             .transform = transform,
         };
     }
@@ -144,20 +233,31 @@ pub const TransformAnim = struct {
         self.anim.update(dt);
         const progress = self.anim.getProgress();
 
-        const rotationAngle = self.transform.rotation.extractAxisAngle();
-        const lerpedAngle = za.lerp(f32, 0, rotationAngle.angle, progress);
-        const rotation = za.Quat.fromAxis(lerpedAngle, rotationAngle.axis);
-        const lerpedScale = Vec3.lerp(Vec3.new(1, 1, 1), self.transform.scale, progress);
+        // There seems to be an error here if there are changes in the original_tranform
+        const current_delta_pos = self.transform.position.scale(progress);
+        const current_delta_scale = Vec3.lerp(
+            Vec3.one(),
+            self.transform.scale,
+            progress
+        );
 
-        for (0..self.drawable.vertices.items.len) |i| {
-            var newVertex = rotation.rotateVec(self.original_vertices.items[i]);
-            newVertex = newVertex.mul(lerpedScale);
-            self.drawable.vertices.items[i] = newVertex;
-        }
+        const current_delta_rot = za.Quat.slerp(
+            za.Quat.identity(),
+            self.transform.rotation,
+            progress
+        );
+
+        self.drawable.transform.position = self.original_tranform.position.add(current_delta_pos);
+        self.drawable.transform.scale = self.original_tranform.scale.mul(current_delta_scale);
+        self.drawable.transform.rotation = za.Quat.mul(self.original_tranform.rotation, current_delta_rot);
     }
 
     pub fn isFinished(self: TransformAnim) bool {
         return self.anim.isFinished();
+    }
+
+    pub fn getDuration(self: TransformAnim) f32 {
+        return self.anim.duration;
     }
 
     pub fn asAnimatable(self: *TransformAnim) Animatable {
