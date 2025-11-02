@@ -57,8 +57,8 @@ pub fn main() !void {
     defer animations.deinit(allocator);
 
     var transform = Transform.init();
-    transform.rotation = za.Quat.fromAxis(-34, Vec3.new(1, 0, 0.5));
-    transform.scale = Vec3.new(0.8, 0.4, 0.5);
+    transform.rotation = za.Quat.fromAxis(-34, Vec3.new(0, 0, 1));
+    transform.scale = Vec3.new(0.8, 0.4, 1);
 
     const transformTriangle = try TransformAnim.init(allocator, &triangle.base, transform, 2);
     const transformRectangle = try TransformAnim.init(allocator, &rectangle.base, transform, 2);

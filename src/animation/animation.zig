@@ -233,23 +233,25 @@ pub const TransformAnim = struct {
         self.anim.update(dt);
         const progress = self.anim.getProgress();
 
-        // There seems to be an error here if there are changes in the original_tranform
-        const current_delta_pos = self.transform.position.scale(progress);
-        const current_delta_scale = Vec3.lerp(
+        // TODO: update drawable transform so the end of the animation
+        // is the new world position.
+        self.drawable.anim_transform.position = Vec3.lerp(
+            Vec3.zero(),
+            self.transform.position,
+            progress
+        );
+
+        self.drawable.anim_transform.scale = Vec3.lerp(
             Vec3.one(),
             self.transform.scale,
             progress
         );
 
-        const current_delta_rot = za.Quat.slerp(
+        self.drawable.anim_transform.rotation = za.Quat.slerp(
             za.Quat.identity(),
             self.transform.rotation,
             progress
         );
-
-        self.drawable.transform.position = self.original_tranform.position.add(current_delta_pos);
-        self.drawable.transform.scale = self.original_tranform.scale.mul(current_delta_scale);
-        self.drawable.transform.rotation = za.Quat.mul(self.original_tranform.rotation, current_delta_rot);
     }
 
     pub fn isFinished(self: TransformAnim) bool {

@@ -9,6 +9,8 @@ const drawableTypes = @import("drawable_types.zig");
 pub const Drawable = struct {
     vertex_mode: geometry.VertexMode ,
     transform: Transform,
+    // Tranfrom used for animations
+    anim_transform: Transform,
     // Represents the points that define the shape
     vertices: std.ArrayList(Vec3),
     color: Vec3,
@@ -33,6 +35,7 @@ pub const Drawable = struct {
             .vertex_mode = mode,
             .vertex_buffer = .empty,
             .transform = Transform.init(),
+            .anim_transform = Transform.init(),
             .color  = Vec3.new(1, 1, 1),
         };
 
@@ -54,6 +57,9 @@ pub const Drawable = struct {
     }
 
     pub fn rotate(self: *Drawable, angle: f32, axis: za.Vec3) void {
+        // the rotation gets applied around the world origin, insted of the
+        // objects own center, (when you translate the object).
+        // This will cause issues in the future but it's fine for now.
         self.transform.rotation = za.Quat.fromAxis(angle, axis);
     }
 
@@ -62,7 +68,9 @@ pub const Drawable = struct {
     }
 
     pub fn getTransformMatrix(self: Drawable) za.Mat4 {
-        return self.transform.toMatrix();
+        const baseMatrix = self.transform.toMatrix();
+        const animMatrix = self.anim_transform.toMatrix();
+        return animMatrix.mul(baseMatrix);
     }
 
     pub fn clearVertexBuffer(self: *Drawable) void {
