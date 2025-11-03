@@ -8,6 +8,7 @@ const Shader = @import("render/shader.zig").Shader;
 const Camera = @import("render/camera.zig").Camera;
 const Line = @import("drawables/drawable_types.zig").Line;
 const Polygon = @import("drawables/drawable_types.zig").Polygon;
+const Arrow2D = @import("drawables/drawable_types.zig").Arrow2D;
 const Render = @import("render/render.zig").Renderer;
 const Drawable = @import("drawables/drawable.zig").Drawable;
 const Scene = @import("scene.zig").Scene;
@@ -31,6 +32,14 @@ pub fn main() !void {
     // Create your scene
     var scene = try engine.createScene();
     defer scene.deinit();
+
+    var arrow = try scene.create(Arrow2D, try .init(
+        scene.a, Vec3.new(0, 0, 0), Vec3.new(-2, -2, 0), Vec4.new(1, 0, 0, 1),
+    ));
+    arrow.setLineWidth(0.05);
+    arrow.setHeadSize(0.2, 0.2);
+
+    try scene.add(&arrow.base);
 
     var triangle = try scene.create(Polygon, try .init(
         scene.a,

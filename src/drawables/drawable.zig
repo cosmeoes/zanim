@@ -20,11 +20,11 @@ pub const Drawable = struct {
     drawableType: drawableTypes.DrawableType,
     allocator: std.mem.Allocator,
 
-    pub fn init(allocator: std.mem.Allocator, mode: geometry.VertexMode, drawableType: drawableTypes.DrawableType, vertices: []const Vec3) error{OutOfMemory}!Drawable {
+    pub fn init(allocator: std.mem.Allocator, drawableType: drawableTypes.DrawableType, vertices: []const Vec3) !Drawable {
         var drawable = Drawable{
             .drawableType = drawableType,
             .vertices = .empty,
-            .vertex_mode = mode,
+            .vertex_mode = .Triangles,
             .vertex_buffer = .empty,
             .transform = Transform.init(),
             .anim_transform = Transform.init(),

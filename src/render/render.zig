@@ -2,7 +2,6 @@ const Shader = @import("shader.zig").Shader;
 const c = @cImport({
     @cInclude("glad/glad.h");
 });
-const Camera = @import("camera.zig").Camera;
 const za = @import("zalgebra");
 const std = @import("std");
 const geometry = @import("../drawables/utils/geometry.zig");
@@ -112,10 +111,10 @@ pub const Renderer = struct {
 
     fn primitiveToGLMode(mode: geometry.VertexMode) c_uint {
         return switch (mode) {
-            .LineSegments => c.GL_LINES,
-            .LinePath => c.GL_LINE_STRIP,
+            .Lines => c.GL_LINES,
+            .LineStrip => c.GL_LINE_STRIP,
             .LineLoop => c.GL_LINE_LOOP,
-            .TriangleMesh => c.GL_TRIANGLES,
+            .Triangles => c.GL_TRIANGLES,
             .Points => c.GL_POINTS,
         };
     }

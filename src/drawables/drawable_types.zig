@@ -9,12 +9,14 @@ const geometry = @import("utils/geometry.zig");
 pub const DrawableType = enum {
     Line,
     Polygon,
+    Arrow2D,
 };
 
 pub fn generateVerticesUsingType(drawable: *Drawable) !void {
     try switch (drawable.drawableType) {
         .Line => Line.generateVertices(drawable),
         .Polygon => Polygon.generateVertices(drawable),
+        .Arrow2D => Arrow2D.generateVertices(drawable),
     };
 }
 
@@ -30,7 +32,7 @@ pub const Line = struct {
         const vertices = lineToVertices(startPos, endPos, DEFAULT_WIDTH);
 
         var line = Line{
-            .base = try Drawable.init(allocator, .TriangleMesh, .Line, &vertices),
+            .base = try Drawable.init(allocator, .Line, &vertices),
             .startPos = startPos,
             .endPos = endPos,
             .width = DEFAULT_WIDTH,
@@ -60,7 +62,7 @@ pub const Line = struct {
     }
 
     fn updateVertices(self: *Line) void {
-        lineToVertices(self.startPos, self.endPos, self.width);
+        self.base.vertices.items = lineToVertices(self.startPos, self.endPos, self.width);
     }
 
     // Converts the two points that define a line into the
@@ -103,7 +105,7 @@ pub const Polygon = struct {
 
     pub fn init(allocator: std.mem.Allocator, vertices: []const Vec3, color: Vec4) error{OutOfMemory}!Polygon {
         var polygon = Polygon{
-            .base = try Drawable.init(allocator, .TriangleMesh, .Polygon, vertices),
+            .base = try Drawable.init(allocator, .Polygon, vertices),
         };
         polygon.base.setColor(color);
 
@@ -131,5 +133,104 @@ pub const Polygon = struct {
             try drawable.appendVec3(v2);
             try drawable.appendColor(drawable.color);
         }
+    }
+};
+
+pub const Arrow2D = struct {
+    const DEFAULT_LINE_WIDTH: f32 = 0.01;
+    const DEFAULT_HEAD_WIDTH: f32 = 0.1;
+    const DEFAULT_HEAD_HEIGHT: f32 = 0.1;
+    base: Drawable,
+    // use helper methods to modify this guys
+    start_pos: Vec3,
+    end_pos: Vec3,
+    line_width: f32,
+    head_width: f32,
+    head_height: f32,
+    allocator: std.mem.Allocator,
+
+    pub fn init(allocator: std.mem.Allocator, startPos: Vec3, endPos: Vec3, color: Vec4) !Arrow2D {
+        const vertices = toVertices(
+            startPos,
+            endPos,
+            DEFAULT_LINE_WIDTH,
+            DEFAULT_HEAD_WIDTH,
+            DEFAULT_HEAD_HEIGHT,
+        );
+
+        var arrow2d = Arrow2D{
+            .base = try Drawable.init(allocator, .Arrow2D, &vertices),
+            .start_pos = startPos,
+            .end_pos = endPos,
+            .line_width = DEFAULT_LINE_WIDTH,
+            .head_width = DEFAULT_HEAD_WIDTH,
+            .head_height = DEFAULT_HEAD_HEIGHT,
+            .allocator = allocator,
+        };
+
+        arrow2d.base.setColor(color);
+        return arrow2d;
+    }
+
+    pub fn deinit(self: *Arrow2D) void {
+        self.base.deinit();
+    }
+
+    pub fn setHeadSize(self: *Arrow2D, headWidth: f32, headHeight: f32) void {
+        self.head_width = headWidth;
+        self.head_height = headHeight;
+        self.updateVertices();
+    }
+
+    pub fn setLineWidth(self: *Arrow2D, lineWidth: f32) void {
+        self.line_width = lineWidth;
+        self.updateVertices();
+    }
+
+    fn updateVertices(self: *Arrow2D) void {
+        self.base.vertices.clearRetainingCapacity();
+        const newVertices = toVertices(self.start_pos, self.end_pos, self.line_width, self.head_width, self.head_height);
+        self.base.vertices.appendSliceAssumeCapacity(&newVertices);
+    }
+
+    // Generates the vertices for the given parameters
+    fn toVertices(startPos: Vec3, endPos: Vec3, lineWidth: f32, headWidth: f32, headHeight: f32) [7]Vec3 {
+        const normal = Vec3.new(-1 * (endPos.y() - startPos.y()), endPos.x() - startPos.x(), 0).norm();
+        const lineWidthVector = normal.scale(lineWidth / 2);
+        const headWidthVector = normal.scale(headWidth / 2);
+        const direction = endPos.norm();
+
+        const vertices = [_]Vec3{
+            // line
+            startPos.add(lineWidthVector),
+            startPos.sub(lineWidthVector),
+            // So it doesnt overlap with the arrow head
+            endPos.sub(lineWidthVector).sub(direction.scale(headHeight)),
+            endPos.add(lineWidthVector).sub(direction.scale(headHeight)),
+            // arrow head
+            endPos.sub(direction.scale(headHeight)).sub(headWidthVector),
+            endPos.sub(direction.scale(headHeight)).add(headWidthVector),
+            endPos,
+        };
+
+        std.log.info("Vertices: {any} {any} {any} {any}", .{ vertices[0].data, vertices[1].data, vertices[2].data, vertices[3].data });
+        std.log.info("Vertices: {} {any} {any} ", .{ vertices[4].data, vertices[5].data, vertices[6].data });
+        return vertices;
+    }
+
+    pub fn generateVertices(drawable: *Drawable) !void {
+        // Line
+        try Line.generateVertices(drawable);
+
+        // Head
+        const headLeft = drawable.vertices.items[4];
+        const headRight = drawable.vertices.items[5];
+        const tip = drawable.vertices.items[6];
+        try drawable.appendVec3(headLeft);
+        try drawable.appendColor(drawable.color);
+        try drawable.appendVec3(headRight);
+        try drawable.appendColor(drawable.color);
+        try drawable.appendVec3(tip);
+        try drawable.appendColor(drawable.color);
     }
 };

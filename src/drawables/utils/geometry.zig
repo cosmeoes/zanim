@@ -1,13 +1,13 @@
 /// How vertices should be interpreted
 pub const VertexMode = enum {
     /// Independent line segments (pairs of points)
-    LineSegments,
+    Lines,
     /// Connected line forming a path
-    LinePath,
+    LineStrip,
     /// Connected line that closes back to start
     LineLoop,
     /// Filled triangles
-    TriangleMesh,
+    Triangles,
     /// Individual points
     Points,
 };
