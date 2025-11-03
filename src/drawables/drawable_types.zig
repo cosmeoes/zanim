@@ -12,6 +12,7 @@ pub const DrawableType = enum {
     Polygon,
     Arrow2D,
     Grid2D,
+    Cuboid,
 };
 
 pub fn generateVerticesUsingType(drawable: *Drawable) !void {
@@ -20,6 +21,7 @@ pub fn generateVerticesUsingType(drawable: *Drawable) !void {
         .Polygon => Polygon.generateVertices(drawable),
         .Arrow2D => Arrow2D.generateVertices(drawable),
         .Grid2D => Grid2D.generateVertices(drawable),
+        .Cuboid => Cuboid.generateVertices(drawable),
     };
 }
 
@@ -276,15 +278,15 @@ pub const Grid2D = struct {
         self.updateVertices();
     }
 
-    pub fn setLineWidth(self: *Grid2D, lineWidth: f32) void {
+    pub fn setLineWidth(self: *Grid2D, lineWidth: f32) !void {
         self.line_width = lineWidth;
-        self.updateVertices();
+        try self.updateVertices();
     }
 
-    fn updateVertices(self: *Grid2D) void {
+    fn updateVertices(self: *Grid2D) !void {
         self.base.vertices.clearRetainingCapacity();
-        const newVertices = toVertices(self.start_pos, self.end_pos, self.line_width, self.head_width, self.head_height);
-        self.base.vertices.appendSliceAssumeCapacity(&newVertices);
+        const newVertices = try toVertices(self.allocator, self.x_span, self.x_span, self.line_width);
+        self.base.vertices.appendSliceAssumeCapacity(newVertices.items);
     }
 
     // Generates the vertices for the given parameters
@@ -345,3 +347,95 @@ pub const Grid2D = struct {
     }
 };
 
+pub const Cuboid = struct {
+    const DEFAULT_LINE_WIDTH: f32 = 0.01;
+    base: Drawable,
+    // use helper methods to modify this guys
+    dimensions: Vec3,
+
+    pub fn init(allocator: std.mem.Allocator, dimensions: Vec3, color: Vec4) !Cuboid {
+        const vertices = toVertices(dimensions);
+
+        var cuboid: Cuboid = .{
+            .base = try Drawable.init(allocator, .Cuboid, &vertices),
+            .dimensions = dimensions,
+        };
+
+        cuboid.base.setColor(color);
+        return cuboid;
+    }
+
+    pub fn deinit(self: *Cuboid) void {
+        self.base.deinit();
+    }
+
+    pub fn setHeadSize(self: *Cuboid, headWidth: f32, headHeight: f32) void {
+        self.head_width = headWidth;
+        self.head_height = headHeight;
+        self.updateVertices();
+    }
+
+    pub fn setLineWidth(self: *Cuboid, lineWidth: f32) void {
+        self.line_width = lineWidth;
+        self.updateVertices();
+    }
+
+    fn updateVertices(self: *Cuboid) void {
+        self.base.vertices.clearRetainingCapacity();
+        const newVertices = toVertices(self.start_pos, self.end_pos, self.line_width, self.head_width, self.head_height);
+        self.base.vertices.appendSliceAssumeCapacity(&newVertices);
+    }
+
+    // Generates the vertices for the given parameters
+    fn toVertices(dimensions: Vec3) [8]Vec3 {
+        const size = 8;
+        var vertices: [size]Vec3 = .{Vec3.one()}**size;
+
+        const width = dimensions.x();
+        const height = dimensions.y();
+        const depth = dimensions.z();
+
+        // Front top left  
+        vertices[0] = Vec3.new(-width/2, height/2, depth/2);
+        // Front bottom left  
+        vertices[1] = Vec3.new(-width/2, -height/2, depth/2);
+        // Front bottom right  
+        vertices[2] = Vec3.new(width/2, -height/2, depth/2);
+        // Front top right  
+        vertices[3] = Vec3.new(width/2, height/2, depth/2);
+
+        // Back top left  
+        vertices[4] = Vec3.new(-width/2, height/2, -depth/2);
+        // Back bottom left  
+        vertices[5] = Vec3.new(-width/2, -height/2, -depth/2);
+        // Back bottom right  
+        vertices[6] = Vec3.new(width/2, -height/2, -depth/2);
+        // Back top right  
+        vertices[7] = Vec3.new(width/2, height/2, -depth/2);
+
+        return vertices;
+    }
+
+    pub fn generateVertices(drawable: *Drawable) !void {
+        const vertices = drawable.vertices.items;
+        const indices = [_]usize {
+            // front face 
+            0, 1, 3, 1, 2, 3,
+            // Left Face
+            4, 5, 0, 5, 1, 0,
+            // Back face
+            4, 5, 7, 5, 6, 7,
+            // Right face
+            3, 2, 7, 2, 6, 7, 
+            // bottom face
+            1, 5, 2, 5, 6, 2,
+            // Top face
+            4, 0, 7, 0, 3, 7,
+        };
+
+        for (indices) |i| {
+            try drawable.appendVec3(vertices[i]);
+            try drawable.appendColor(drawable.color);
+        }
+    }
+};

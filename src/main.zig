@@ -1,5 +1,4 @@
 const std = @import("std");
-const zig_manim = @import("zig_manim");
 const za = @import("zalgebra");
 const Vec3 = za.Vec3;
 const Vec4 = za.Vec4;
@@ -10,6 +9,7 @@ const Line = @import("drawables/drawable_types.zig").Line;
 const Polygon = @import("drawables/drawable_types.zig").Polygon;
 const Arrow2D = @import("drawables/drawable_types.zig").Arrow2D;
 const Grid2D = @import("drawables/drawable_types.zig").Grid2D;
+const Cuboid = @import("drawables/drawable_types.zig").Cuboid;
 const Render = @import("render/render.zig").Renderer;
 const Drawable = @import("drawables/drawable.zig").Drawable;
 const Scene = @import("scene.zig").Scene;
@@ -35,7 +35,7 @@ pub fn main() !void {
     if (args.next()) |arg| {
         choice = arg;
     } else {
-        std.log.info("No option selected: 'shapes', 'vectors'", .{});
+        std.log.info("No option selected: 'shapes', 'vectors', 'cube'", .{});
         return;
     }
 
@@ -49,8 +49,10 @@ pub fn main() !void {
         try buildShapes(&scene);
     } else if (std.mem.eql(u8, choice, "vectors")) {
         try buildVectors(&scene);
+    } else if (std.mem.eql(u8, choice, "cube")) {
+        try buildCube(&scene);
     } else {
-        std.log.info("No option '{s}' not found, options: 'shapes', 'vectors'", .{choice});
+        std.log.info("No option '{s}' not found, options: 'shapes', 'vectors', 'cube'", .{choice});
         return;
     }
 
@@ -288,5 +290,26 @@ pub fn buildVectors(scene: *Scene) !void {
         redArrowSquish.asAnimatable(),
         blueArrowSquish.asAnimatable(),
         greenArrowSquish.asAnimatable(),
+    });
+}
+
+pub fn buildCube(scene: *Scene) !void {
+    const grid = try scene.create(Grid2D, try .init(scene.a, za.Vec2.new(-10, 10), za.Vec2.new(-10, 10), Vec4.new(0, 1, 1, 1)));
+    try grid.setLineWidth(0.1);
+    grid.base.rotate(-90, Vec3.new(1, 0, 0));
+    grid.base.translate(Vec3.new(0, -2, 0));
+    try scene.add(&grid.base);
+    const cube = try scene.create(Cuboid, try .init(scene.a, Vec3.one().scale(2), Vec4.new(0, 0, 1, 0.9)));
+    try scene.add(&cube.base);
+
+    var rotate = Transform.init();
+    rotate.rotate(180, Vec3.new(1, 1, 1));
+    var animation = try scene.create(TransformAnim, .init(&cube.base, rotate, 15));
+    var gridRotate = Transform.init();
+    gridRotate.rotate(180, Vec3.new(0, 1, 0));
+    var gridAnimation = try scene.create(TransformAnim, .init(&grid.base, gridRotate, 15));
+    try scene.playGroup(&[_]Animatable{
+        animation.asAnimatable(),
+        gridAnimation.asAnimatable(),
     });
 }
