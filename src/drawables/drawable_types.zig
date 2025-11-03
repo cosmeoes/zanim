@@ -1,6 +1,7 @@
 const std = @import("std");
 const za = @import("zalgebra");
 const Vec3 = za.Vec3;
+const Vec4 = za.Vec4;
 const Mat4 = za.Mat4;
 const Drawable = @import("drawable.zig").Drawable;
 const geometry = @import("utils/geometry.zig");
@@ -25,7 +26,7 @@ pub const Line = struct {
     endPos: Vec3,
     width: f32,
 
-    pub fn init(allocator: std.mem.Allocator, startPos: Vec3, endPos: Vec3, color: Vec3) error{OutOfMemory}!Line {
+    pub fn init(allocator: std.mem.Allocator, startPos: Vec3, endPos: Vec3, color: Vec4) error{OutOfMemory}!Line {
         const vertices = lineToVertices(startPos, endPos, DEFAULT_WIDTH);
 
         var line = Line{
@@ -82,25 +83,25 @@ pub const Line = struct {
         const topRight = drawable.vertices.items[3];
 
         try drawable.appendVec3(topLeft);
-        try drawable.appendVec3(drawable.color);
+        try drawable.appendColor(drawable.color);
         try drawable.appendVec3(bottomLeft);
-        try drawable.appendVec3(drawable.color);
+        try drawable.appendColor(drawable.color);
         try drawable.appendVec3(topRight);
-        try drawable.appendVec3(drawable.color);
+        try drawable.appendColor(drawable.color);
 
         try drawable.appendVec3(bottomLeft);
-        try drawable.appendVec3(drawable.color);
+        try drawable.appendColor(drawable.color);
         try drawable.appendVec3(bottomRight);
-        try drawable.appendVec3(drawable.color);
+        try drawable.appendColor(drawable.color);
         try drawable.appendVec3(topRight);
-        try drawable.appendVec3(drawable.color);
+        try drawable.appendColor(drawable.color);
     }
 };
 
 pub const Polygon = struct {
     base: Drawable,
 
-    pub fn init(allocator: std.mem.Allocator, vertices: []const Vec3, color: Vec3) error{OutOfMemory}!Polygon {
+    pub fn init(allocator: std.mem.Allocator, vertices: []const Vec3, color: Vec4) error{OutOfMemory}!Polygon {
         var polygon = Polygon{
             .base = try Drawable.init(allocator, .TriangleMesh, .Polygon, vertices),
         };
@@ -122,13 +123,13 @@ pub const Polygon = struct {
 
             const v2 = drawable.vertices.items[i + 1];
             try drawable.appendVec3(firstVertex);
-            try drawable.appendVec3(drawable.color);
+            try drawable.appendColor(drawable.color);
 
             try drawable.appendVec3(v1);
-            try drawable.appendVec3(drawable.color);
+            try drawable.appendColor(drawable.color);
 
             try drawable.appendVec3(v2);
-            try drawable.appendVec3(drawable.color);
+            try drawable.appendColor(drawable.color);
         }
     }
 };

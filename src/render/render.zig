@@ -25,6 +25,15 @@ pub const Renderer = struct {
         c.glDisable(c.GL_DEPTH_TEST);
     }
 
+    pub fn enableBlend() void {
+        c.glEnable(c.GL_BLEND);
+        c.glBlendFunc(c.GL_SRC_ALPHA, c.GL_ONE_MINUS_SRC_ALPHA);
+    }
+
+    pub fn disableBlend() void {
+        c.glDisable(c.GL_BLEND);
+    }
+
     pub fn new(shader: Shader) Renderer {
         var vao: c_uint = undefined;
         var vbo: c_uint = undefined;
@@ -32,7 +41,7 @@ pub const Renderer = struct {
         c.glGenBuffers(1, &vbo);
 
         const projection = za.perspective(45.0, 1, 0.1, 100.0);
-        return Renderer {
+        return Renderer{
             .shader = shader,
             .vao = vao,
             .vbo = vbo,
@@ -86,9 +95,9 @@ pub const Renderer = struct {
             c.GL_DYNAMIC_DRAW,
         );
 
-        c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 6 * @sizeOf(f32), null);
+        c.glVertexAttribPointer(0, 3, c.GL_FLOAT, c.GL_FALSE, 7 * @sizeOf(f32), null);
         c.glEnableVertexAttribArray(0);
-        c.glVertexAttribPointer(1, 3, c.GL_FLOAT, c.GL_FALSE, 6 * @sizeOf(f32), @ptrFromInt(3 * @sizeOf(f32)));
+        c.glVertexAttribPointer(1, 4, c.GL_FLOAT, c.GL_FALSE, 7 * @sizeOf(f32), @ptrFromInt(3 * @sizeOf(f32)));
         c.glEnableVertexAttribArray(1);
 
         c.glDrawArrays(primitiveToGLMode(vertexMode), 0, @intCast(vertices.len));

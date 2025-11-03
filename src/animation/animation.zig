@@ -4,6 +4,7 @@ const Drawable = @import("../drawables/drawable.zig").Drawable;
 const Transform = @import("../drawables/utils/transform.zig").Transform;
 const za = @import("zalgebra");
 const Vec3 = @import("zalgebra").Vec3;
+const Vec4 = @import("zalgebra").Vec4;
 const std = @import("std");
 
 pub const Animatable = struct {
@@ -113,6 +114,10 @@ pub const AnimationGroup = struct {
 
     pub fn deinit(self: *AnimationGroup) void {
         self.animations.deinit(self.allocator);
+    }
+
+    pub fn add(self: *AnimationGroup, animatable: Animatable) !void {
+        try self.animations.append(animatable);
     }
 
     pub fn update(self: *AnimationGroup, dt: f32) void {
@@ -233,12 +238,10 @@ pub const Create = struct {
 pub const TransformAnim = struct {
     anim: Animation,
     drawable: *Drawable,
-    allocator: std.mem.Allocator,
     transform: Transform,
 
-    pub fn init(allocator: std.mem.Allocator, drawable: *Drawable, transform: Transform, duration: f32) TransformAnim {
+    pub fn init(drawable: *Drawable, transform: Transform, duration: f32) TransformAnim {
         return .{
-            .allocator = allocator,
             .anim = Animation.init(duration),
             .drawable = drawable,
             .transform = transform,
@@ -283,7 +286,7 @@ pub const TransformAnim = struct {
     }
 
     pub fn finalize(self: TransformAnim) void {
-        self.drawable.transform = self.drawable.transform.combine(self.drawable.anim_transform);
+        self.drawable.transform = self.drawable.anim_transform.combine(self.drawable.transform);
         self.drawable.anim_transform = Transform.init();
     }
 
@@ -291,4 +294,54 @@ pub const TransformAnim = struct {
         return Animatable.init(self);
     }
 
+};
+
+pub const FadeAnimation = struct {
+    anim: Animation,
+    drawable: *Drawable,
+    start_alpha: f32,
+    end_alpha: f32,
+
+    pub fn init(drawable: *Drawable, startAlpha: f32, endAlpha: f32, duration: f32) FadeAnimation {
+        return .{
+            .anim = Animation.init(duration),
+            .drawable = drawable,
+            .start_alpha = startAlpha,
+            .end_alpha = endAlpha,
+        };
+    }
+
+    pub fn deinit(self: FadeAnimation) void {
+        _ = self;
+    }
+
+    pub fn update(self: *FadeAnimation, dt: f32) void {
+        self.anim.update(dt);
+        const progress = self.anim.getProgress();
+
+        const lerpColor = za.lerp(f32, self.start_alpha, self.end_alpha, progress);
+        self.drawable.color = Vec4.new(
+            self.drawable.color.x(), self.drawable.color.y(), self.drawable.color.z(), 
+            lerpColor,
+        );
+    }
+
+    pub fn getDuration(self: FadeAnimation) f32 {
+        return self.anim.duration;
+    }
+
+    pub fn isFinished(self: FadeAnimation) bool {
+        return self.anim.isFinished();
+    }
+
+    pub fn finalize(self: FadeAnimation) void {
+        self.drawable.color = Vec4.new(
+            self.drawable.color.x(), self.drawable.color.y(), self.drawable.color.z(), 
+            self.end_alpha,
+        );
+    }
+
+    pub fn asAnimatable(self: *FadeAnimation) Animatable {
+        return Animatable.init(self);
+    }
 };

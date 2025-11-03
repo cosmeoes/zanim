@@ -1,7 +1,8 @@
 const std = @import("std");
 const za = @import("zalgebra");
-const Vec3 = za.Vec3; 
-const Mat4 = za.Mat4; 
+const Vec3 = za.Vec3;
+const Vec4 = za.Vec4;
+const Mat4 = za.Mat4;
 const geometry = @import("utils/geometry.zig");
 const Transform = @import("utils/transform.zig").Transform;
 const drawableTypes = @import("drawable_types.zig");
@@ -13,7 +14,7 @@ pub const Drawable = struct {
     anim_transform: Transform,
     // Represents the points that define the shape
     vertices: std.ArrayList(Vec3),
-    color: Vec3,
+    color: Vec4,
     // Represents the data that will be used for rendering
     vertex_buffer: std.ArrayList(f32),
     drawableType: drawableTypes.DrawableType,
@@ -27,7 +28,7 @@ pub const Drawable = struct {
             .vertex_buffer = .empty,
             .transform = Transform.init(),
             .anim_transform = Transform.init(),
-            .color  = Vec3.new(1, 1, 1),
+            .color  = Vec4.new(1, 1, 1, 1),
             .allocator = allocator,
         };
 
@@ -40,7 +41,7 @@ pub const Drawable = struct {
         self.vertices.deinit(self.allocator);
     }
 
-    pub fn setColor(self: *Drawable, color: Vec3) void {
+    pub fn setColor(self: *Drawable, color: Vec4) void {
         self.color = color;
     }
 
@@ -70,6 +71,13 @@ pub const Drawable = struct {
         try self.vertex_buffer.append(self.allocator, value.x());
         try self.vertex_buffer.append(self.allocator, value.y());
         try self.vertex_buffer.append(self.allocator, value.z());
+    }
+
+    pub fn appendColor(self: *Drawable, value: Vec4) !void {
+        try self.vertex_buffer.append(self.allocator, value.x());
+        try self.vertex_buffer.append(self.allocator, value.y());
+        try self.vertex_buffer.append(self.allocator, value.z());
+        try self.vertex_buffer.append(self.allocator, value.w());
     }
 
     pub fn generateVertexBuffer(self: *Drawable) !void {

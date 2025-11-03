@@ -128,7 +128,6 @@ pub const Previewer = struct {
 
     fn render(self: *Previewer, scene: *Scene) !void {
         self.renderer.clear(0, 0, 0);
-        Renderer.enableDepthTest();
 
         var width: c_int = undefined;
         var height: c_int = undefined;
@@ -140,6 +139,8 @@ pub const Previewer = struct {
         self.renderer.setViewMatrix(g_camera.viewMatrix());
         self.renderer.setProjectionMatrix(projection);
 
+        Renderer.enableBlend();
+        Renderer.enableDepthTest();
         for (scene.objects.items) |object| {
             try object.generateVertexBuffer();
             self.renderer.drawDrawable(object.*);

@@ -38,8 +38,11 @@ pub const Transform = struct {
     pub fn combine(self: Transform, second: Transform) Transform {
         return .{
             .rotation = za.Quat.mul(self.rotation, second.rotation),
-            .position = self.position.add(self.rotation.rotateVec(second.position)),
-            .scaleVec = self.scaleVec.mul(self.rotation.rotateVec(second.scaleVec)),
+            .position = self.position.add(
+                // Rotate then scale
+                self.rotation.rotateVec(second.position.mul(self.scaleVec))
+            ),
+            .scaleVec = self.scaleVec.mul(second.scaleVec),
         };
     }
 };
