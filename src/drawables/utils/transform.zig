@@ -36,6 +36,8 @@ pub const Transform = struct {
     }
 
     pub fn combine(self: Transform, second: Transform) Transform {
+        // Fix: there something wrong here, it doesn't work when the anim (self)
+        // transformation has a different scale than one. Specifically with arrows and grids.
         return .{
             .rotation = za.Quat.mul(self.rotation, second.rotation),
             .position = self.position.add(

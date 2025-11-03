@@ -9,6 +9,7 @@ const Camera = @import("render/camera.zig").Camera;
 const Line = @import("drawables/drawable_types.zig").Line;
 const Polygon = @import("drawables/drawable_types.zig").Polygon;
 const Arrow2D = @import("drawables/drawable_types.zig").Arrow2D;
+const Grid2D = @import("drawables/drawable_types.zig").Grid2D;
 const Render = @import("render/render.zig").Renderer;
 const Drawable = @import("drawables/drawable.zig").Drawable;
 const Scene = @import("scene.zig").Scene;
@@ -26,14 +27,32 @@ pub fn main() !void {
     defer _ = gpa.deinit();
     const baseAllocator = gpa.allocator();
 
-    // Initialize the library
+    var args = try std.process.argsWithAllocator(baseAllocator);
+    defer args.deinit();
+    // skip program name
+    _ = args.skip();
+    var choice: []const u8 = undefined;
+    if (args.next()) |arg| {
+        choice = arg;
+    } else {
+        std.log.info("No option selected: 'shapes', 'vectors'", .{});
+        return;
+    }
+
     var engine = try Engine.init(baseAllocator);
     defer engine.deinit();
-    // Create your scene
+
     var scene = try engine.createScene();
     defer scene.deinit();
 
-    try buildShapes(&scene);
+    if (std.mem.eql(u8, choice, "shapes")) {
+        try buildShapes(&scene);
+    } else if (std.mem.eql(u8, choice, "vectors")) {
+        try buildVectors(&scene);
+    } else {
+        std.log.info("No option '{s}' not found, options: 'shapes', 'vectors'", .{choice});
+        return;
+    }
 
     try engine.preview(&scene, .{
         .width = 1920,
@@ -42,12 +61,6 @@ pub fn main() !void {
 }
 
 pub fn buildShapes(scene: *Scene) !void {
-    var arrow = try scene.create(Arrow2D, try .init(
-        scene.a, Vec3.new(0, 0, 0), Vec3.new(-1, 1, 0), Vec4.new(0.678, 0.847, 0.902, 1),
-    ));
-    arrow.setLineWidth(0.05);
-    arrow.setHeadSize(0.2, 0.2);
-
     var triangle = try scene.create(Polygon, try .init(
         scene.a,
         &[_]Vec3{
@@ -98,11 +111,9 @@ pub fn buildShapes(scene: *Scene) !void {
     const transformTriangle = try scene.create(TransformAnim, .init(&triangle.base, transform, 2));
     const transformRectangle = try scene.create(TransformAnim, .init(&rectangle.base, transform, 2));
     const transformPentagon = try scene.create(TransformAnim, .init(&pentagon.base, transform, 2));
-    const transformArrow = try scene.create(TransformAnim, .init(&arrow.base, transform, 2));
     animations.appendAssumeCapacity(transformTriangle);
     animations.appendAssumeCapacity(transformRectangle);
     animations.appendAssumeCapacity(transformPentagon);
-    animations.appendAssumeCapacity(transformArrow);
 
     // X axis
     var i: i32 = -10;
@@ -138,7 +149,6 @@ pub fn buildShapes(scene: *Scene) !void {
     try scene.add(&triangle.base);
     try scene.add(&rectangle.base);
     try scene.add(&pentagon.base);
-    try scene.add(&arrow.base);
 
     const animatables: []Animatable = try scene.a.alloc(Animatable, animations.items.len);
     for (animations.items, 0..) |trans, index| {
@@ -167,10 +177,8 @@ pub fn buildShapes(scene: *Scene) !void {
     var rotateRect = Transform.init();
     rotateRect.rotate(-90, Vec3.new(0, 0, 1));
     var rectRotate = try scene.create(TransformAnim, .init(&rectangle.base, rotateRect, 2));
-    var rotateArrow = try scene.create(TransformAnim, .init(&arrow.base, rotateRect, 2));
     var rotateGroup = try scene.create(AnimationGroup, try .init(scene.a, &[_]Animatable{
         rectRotate.asAnimatable(),
-        rotateArrow.asAnimatable(),
     }));
     try scene.play(rotateGroup.asAnimatable());
 
@@ -189,12 +197,96 @@ pub fn buildShapes(scene: *Scene) !void {
     var moveTriangleAnimation = try scene.create(TransformAnim, .init(&triangle.base, moveTransform, 2));
     var rectangleFadeout = try scene.create(FadeAnimation, .init(&rectangle.base, 1, 0, 3));
     var pentagonFadeout = try scene.create(FadeAnimation, .init(&pentagon.base, 1, 0, 3));
-    var arrowFadeout = try scene.create(FadeAnimation, .init(&arrow.base, 1, 0, 3));
     var endGroup = try scene.create(AnimationGroup, try .init(scene.a, &[_]Animatable{
         moveTriangleAnimation.asAnimatable(),
         rectangleFadeout.asAnimatable(),
         pentagonFadeout.asAnimatable(),
-        arrowFadeout.asAnimatable(),
     }));
     try scene.play(endGroup.asAnimatable());
+}
+
+pub fn buildVectors(scene: *Scene) !void {
+    const grid = try scene.create(Grid2D, try .init(scene.a, za.Vec2.new(-10, 10), za.Vec2.new(-10, 10), Vec4.new(0, 1, 1, 1)));
+    grid.base.transform.translate(Vec3.new(0, 0, -0.01));
+
+    var redArrow = try scene.create(Arrow2D, try .init(
+        scene.a, Vec3.new(0, 0, 0), Vec3.new(-1, 1, 0), Vec4.new(0.9, 0.1, 0.1, 1),
+    ));
+    redArrow.setLineWidth(0.05);
+    redArrow.setHeadSize(0.2, 0.2);
+
+    var blueArrow = try scene.create(Arrow2D, try .init(
+        scene.a, Vec3.new(0, 0, 0), Vec3.new(1, 1, 0), Vec4.new(0.1, 0.1, 0.9, 0), // Alpha 0 to hide
+    ));
+    blueArrow.setLineWidth(0.05);
+    blueArrow.setHeadSize(0.2, 0.2);
+
+    var greenArrow = try scene.create(Arrow2D, try .init(
+        scene.a, redArrow.end_pos, blueArrow.end_pos, Vec4.new(0.1, 0.9, 0.1, 0), // Alpha 0 to hide
+    ));
+    greenArrow.base.translate(Vec3.new(0, 0, 0.01));
+    greenArrow.setLineWidth(0.05);
+    greenArrow.setHeadSize(0.2, 0.2);
+
+    const rotation = za.Quat.fromAxis(45, Vec3.new(0, 0, 1));
+    var greenArrow2 = try scene.create(Arrow2D, try .init(
+        scene.a, rotation.rotateVec(redArrow.end_pos), blueArrow.end_pos, Vec4.new(0.1, 0.9, 0.1, 0), // Alpha 0 to hide
+    ));
+    greenArrow2.base.translate(Vec3.new(0, 0, 0.02));
+    greenArrow2.setLineWidth(0.05);
+    greenArrow2.setHeadSize(0.2, 0.2);
+
+    try scene.add(&grid.base);
+    try scene.add(&redArrow.base);
+    try scene.add(&blueArrow.base);
+    try scene.add(&greenArrow.base);
+    try scene.add(&greenArrow2.base);
+
+    // Animations
+    const createRedArrow = try scene.create(Create, try .init(scene.a, &redArrow.base, 2));
+    try scene.play(createRedArrow.asAnimatable());
+    try scene.wait(2);
+
+    const createBlueArrow = try scene.create(FadeAnimation, .init(&blueArrow.base, 0, 1, 2));
+    try scene.play(createBlueArrow.asAnimatable());
+    try scene.wait(2);
+
+    const createGreenArrow = try scene.create(FadeAnimation, .init(&greenArrow.base, 0, 1, 2));
+    try scene.play(createGreenArrow.asAnimatable());
+    try scene.wait(2);
+
+    var scaleDown = Transform.init(); 
+    scaleDown.scale(0);
+    const greenArrowFadeout = try scene.create(TransformAnim, .init(&greenArrow.base, scaleDown, 1.5));
+    try scene.play(greenArrowFadeout.asAnimatable());
+    try scene.wait(2);
+
+    var globalTransform = Transform.init();
+    globalTransform.rotate(45, Vec3.new(0, 0, 1));
+
+    var gridAnimation = try scene.create(TransformAnim, .init(&grid.base, globalTransform, 2));
+    var arrowAnimation = try scene.create(TransformAnim, .init(&redArrow.base, globalTransform, 2));
+    try scene.playGroup(&[_]Animatable{
+        gridAnimation.asAnimatable(),
+        arrowAnimation.asAnimatable(),
+    });
+
+    const createGreenArrow2 = try scene.create(FadeAnimation, .init(&greenArrow2.base, 0, 1, 2));
+    try scene.play(createGreenArrow2.asAnimatable());
+    try scene.wait(2);
+
+    var fullRotation = Transform.init();
+    fullRotation.rotate(-70, Vec3.new(1, 0.5, 0));
+
+    const duration: f32 = 10;
+    var gridSquish = try scene.create(TransformAnim, .init(&grid.base, fullRotation, duration));
+    var redArrowSquish = try scene.create(TransformAnim, .init(&redArrow.base, fullRotation, duration));
+    var blueArrowSquish = try scene.create(TransformAnim, .init(&blueArrow.base, fullRotation, duration));
+    var greenArrowSquish = try scene.create(TransformAnim, .init(&greenArrow2.base, fullRotation, duration));
+    try scene.playGroup(&[_]Animatable{
+        gridSquish.asAnimatable(),
+        redArrowSquish.asAnimatable(),
+        blueArrowSquish.asAnimatable(),
+        greenArrowSquish.asAnimatable(),
+    });
 }

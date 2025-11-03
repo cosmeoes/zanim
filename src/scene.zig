@@ -2,6 +2,7 @@ const std = @import("std");
 const Drawable = @import("drawables/drawable.zig").Drawable;
 const Animatable = @import("animation/animation.zig").Animatable;
 const DrawableType = @import("drawables/drawable_types.zig").DrawableType;
+const AnimationGroup = @import("animation/animation.zig").AnimationGroup;
 const Wait = @import("animation/animation.zig").Wait;
 
 pub const Scene = struct {
@@ -33,9 +34,13 @@ pub const Scene = struct {
         try self.animation_queue.append(self.a, animation);
     }
 
+    pub fn playGroup(self: *Scene, animations: []const Animatable) !void {
+        const group = try self.create(AnimationGroup, try .init(self.a, animations));
+        try self.animation_queue.append(self.a, group.asAnimatable());
+    }
+
     pub fn wait(self: *Scene, duration: f32) error{OutOfMemory}!void {
-        const waitAnim = try self.a.create(Wait);
-        waitAnim.* = Wait.init(duration);
+        const waitAnim = try self.create(Wait, .init(duration));
         try self.play(waitAnim.asAnimatable());
     }
 
