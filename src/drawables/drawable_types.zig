@@ -62,7 +62,9 @@ pub const Line = struct {
     }
 
     fn updateVertices(self: *Line) void {
-        self.base.vertices.items = lineToVertices(self.startPos, self.endPos, self.width);
+        self.base.vertices.clearRetainingCapacity();
+        const newVertices = lineToVertices(self.startPos, self.endPos, self.width);
+        self.base.vertices.appendSliceAssumeCapacity(&newVertices);
     }
 
     // Converts the two points that define a line into the
@@ -213,8 +215,6 @@ pub const Arrow2D = struct {
             endPos,
         };
 
-        std.log.info("Vertices: {any} {any} {any} {any}", .{ vertices[0].data, vertices[1].data, vertices[2].data, vertices[3].data });
-        std.log.info("Vertices: {} {any} {any} ", .{ vertices[4].data, vertices[5].data, vertices[6].data });
         return vertices;
     }
 

@@ -256,8 +256,6 @@ pub const TransformAnim = struct {
         self.anim.update(dt);
         const progress = self.anim.getProgress();
 
-        // TODO: update drawable transform so the end of the animation
-        // is the new world position.
         self.drawable.anim_transform.position = Vec3.lerp(
             Vec3.zero(),
             self.transform.position,
@@ -293,7 +291,6 @@ pub const TransformAnim = struct {
     pub fn asAnimatable(self: *TransformAnim) Animatable {
         return Animatable.init(self);
     }
-
 };
 
 pub const FadeAnimation = struct {
