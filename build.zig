@@ -6,7 +6,7 @@ const std = @import("std");
 // for defining build steps and express dependencies between them, allowing the
 // build runner to parallelize the build automatically (and the cache system to
 // know when a step doesn't need to be re-run).
-pub fn build(b: *std.Build) void {
+pub fn build(b: *std.Build) !void {
     // Standard target options allow the person running `zig build` to choose
     // what target to build for. Here we do not override the defaults, which
     // means any target is allowed, and the default is native. Other options
@@ -98,8 +98,73 @@ pub fn build(b: *std.Build) void {
     // Add include path for GLAD headers
     exe.addIncludePath(b.path("libs/glad/include"));
 
+    const glfw_src_path = try b.build_root.join(b.allocator, &.{
+        "libs", "glfw", "src",
+    });
+
+    var src_dir = std.fs.openDirAbsolute(glfw_src_path, .{
+        .iterate = true,
+    }) catch |err| {
+        // TODO: maybe clone the submodule here??
+        std.log.info("Gflw source not found, you need to clone the submodule.", .{});
+        return err;
+    };
+    defer src_dir.close();
+
+    var buffer: [100]u8 = undefined;
+    switch (target.result.os.tag) {
+        .windows => {
+            exe.linkSystemLibrary("gdi32");
+            exe.linkSystemLibrary("user32");
+            exe.linkSystemLibrary("shell32");
+            var it = src_dir.iterate();
+            while (try it.next()) |*entry| {
+                if ((!std.mem.startsWith(u8, entry.name, "linux_") and
+                        !std.mem.startsWith(u8, entry.name, "posix_") and
+                        !std.mem.startsWith(u8, entry.name, "xkb_") and
+                        !std.mem.startsWith(u8, entry.name, "glx_") and
+                        !std.mem.startsWith(u8, entry.name, "x11_") and
+                        !std.mem.startsWith(u8, entry.name, "cocoa_") and
+                        !std.mem.startsWith(u8, entry.name, "nsgl_") and
+                        !std.mem.startsWith(u8, entry.name, "wl_")) and
+                        std.mem.endsWith(u8, entry.name, ".c") and entry.kind == .file)
+                {
+                    // Format and write into the buffer
+                    const sourcePath = try std.fmt.bufPrint(&buffer, "{s}{s}", .{"libs/glfw/src/", entry.name});
+                    // Add glfw C source files
+                    exe.addCSourceFile(.{
+                        .file = b.path(sourcePath),
+                        .flags = &[_][]const u8{"-D_GLFW_WIN32", "-Isrc",},
+                    });
+                }
+            }
+        },
+        else => {
+            var it = src_dir.iterate();
+            while (try it.next()) |*entry| {
+                if ((!std.mem.startsWith(u8, entry.name, "wgl_") and
+                        !std.mem.startsWith(u8, entry.name, "win32_") and
+                        !std.mem.startsWith(u8, entry.name, "cocoa_") and
+                        !std.mem.startsWith(u8, entry.name, "nsgl_")) and
+                        std.mem.endsWith(u8, entry.name, ".c") and entry.kind == .file
+                ) {
+                    const sourcePath = try std.fmt.bufPrint(&buffer, "{s}{s}", .{"libs/glfw/src/", entry.name});
+
+                    // Add glfw C source files
+                    exe.addCSourceFile(.{
+                        .file = b.path(sourcePath),
+                        .flags = &[_][]const u8{"-D_GLFW_X11", "-Wno-implicit-function-declaration", "-Isrc"}
+                    });
+                }
+            }
+        }
+    }
+
+    // Add include path for GLFW headers
+    exe.addIncludePath(b.path("libs/glfw/include"));
+
+
     exe.linkSystemLibrary("c");
-    exe.linkSystemLibrary("glfw");
     // This declares intent for the executable to be installed into the
     // install prefix when running `zig build` (i.e. when executing the default
     // step). By default the install prefix is `zig-out/` but can be overridden
