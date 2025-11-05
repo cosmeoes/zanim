@@ -102,10 +102,13 @@ pub fn build(b: *std.Build) !void {
         "libs", "glfw", "src",
     });
 
-
-    var src_dir = try std.fs.openDirAbsolute(glfw_src_path, .{
+    var src_dir = std.fs.openDirAbsolute(glfw_src_path, .{
         .iterate = true,
-    });
+    }) catch |err| {
+        // TODO: maybe clone the submodule here??
+        std.log.info("Gflw source not found, you need to clone the submodule.", .{});
+        return err;
+    };
     defer src_dir.close();
 
     var buffer: [100]u8 = undefined;
@@ -137,17 +140,6 @@ pub fn build(b: *std.Build) !void {
             }
         },
         else => {
-            // Not tested, copied from: https://github.com/tiawl/glfw.zig/blob/d4e35d81f30ec1398d5b40744968459d5a8786e6/build.zig#L182-L214
-            const X11_dep = b.dependency("X11_zig", .{
-                .target = target,
-                .optimize = optimize,
-            });
-
-            for (X11_dep.artifact("X11").root_module.include_dirs.items) |*included| exe.addIncludePath(included.path);
-
-            exe.linkLibrary(X11_dep.artifact("X11"));
-            exe.installLibraryHeaders(X11_dep.artifact("X11"));
-
             var it = src_dir.iterate();
             while (try it.next()) |*entry| {
                 if ((!std.mem.startsWith(u8, entry.name, "wgl_") and
@@ -158,7 +150,6 @@ pub fn build(b: *std.Build) !void {
                 ) {
                     const sourcePath = try std.fmt.bufPrint(&buffer, "{s}{s}", .{"libs/glfw/src/", entry.name});
 
-                    std.log.info("Source Path: {s}", .{sourcePath});
                     // Add glfw C source files
                     exe.addCSourceFile(.{
                         .file = b.path(sourcePath),
